@@ -1,4 +1,5 @@
-import type { FormatDiscogs, Pressage, ResultatRecherche } from './types';
+import type { NouveauDisque } from '../db/schema';
+import type { FormatDiscogs, Pressage, ReleaseDiscogs, ResultatRecherche, StatsMarche } from './types';
 
 /**
  * Supports que l'on sait nommer, du plus précis au plus général.
@@ -30,5 +31,40 @@ export function versPressage(resultat: ResultatRecherche): Pressage {
     label: resultat.label?.[0] ?? '',
     format: formaterSupport(resultat.formats),
     vignette: resultat.thumb === undefined || resultat.thumb === '' ? null : resultat.thumb,
+  };
+}
+
+/** Ce que Discogs peut remplir. Les états et la quantité restent à l'utilisatrice. */
+export type ChampsDiscogs = Pick<
+  NouveauDisque,
+  'artiste' | 'album' | 'annee' | 'label' | 'noCatalogue' | 'pays' | 'format' | 'discogsReleaseId'
+>;
+
+export function versChampsDisque(release: ReleaseDiscogs): ChampsDiscogs {
+  return {
+    artiste: (release.artists ?? []).map((a) => a.name).join(', '),
+    album: release.title,
+    annee: release.year ?? null,
+    label: release.labels?.[0]?.name ?? '',
+    noCatalogue: release.labels?.[0]?.catno ?? '',
+    pays: release.country ?? '',
+    format: formaterSupport(release.formats),
+    discogsReleaseId: release.id,
+  };
+}
+
+/**
+ * Extrait le prix, et SEULEMENT s'il est réellement en dollars canadiens.
+ *
+ * Discogs ignore le paramètre `curr_abbr` sur `/releases/` et y renvoie la devise du
+ * compte appelant. On n'utilise donc que `/marketplace/stats/`, et on vérifie malgré
+ * tout la devise de la réponse : afficher des dollars US comme des dollars canadiens
+ * fausserait l'estimation de toute la collection d'environ 35 %.
+ */
+export function prixCAD(stats: StatsMarche): { valeur: number | null; nombreEnVente: number | null } {
+  const prix = stats.lowest_price;
+  return {
+    valeur: prix !== null && prix.currency === 'CAD' ? prix.value : null,
+    nombreEnVente: stats.num_for_sale ?? null,
   };
 }
