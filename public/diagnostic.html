@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Diagnostic</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 1rem;
+           background: #1c1917; color: #fafaf9; }
+    .test { border: 1px solid #44403c; border-radius: .5rem; padding: .75rem; margin-bottom: .75rem; }
+    .ok { color: #4ade80; } .ko { color: #f87171; }
+    h1 { font-size: 1.25rem; }
+    h2 { font-size: 1rem; margin: 0 0 .5rem; }
+    video { width: 100%; border-radius: .5rem; background: #000; margin-top: .5rem; }
+    button { font-size: 1rem; padding: .75rem 1rem; border-radius: .5rem;
+             border: 0; background: #f59e0b; color: #1c1917; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Diagnostic</h1>
+
+  <div class="test">
+    <h2>1. Mode d'affichage</h2>
+    <p id="mode">…</p>
+  </div>
+
+  <div class="test">
+    <h2>2. Stockage IndexedDB</h2>
+    <p id="stockage">…</p>
+  </div>
+
+  <div class="test">
+    <h2>3. Caméra</h2>
+    <button id="btn-camera">Activer la caméra</button>
+    <p id="camera">…</p>
+    <video id="apercu" playsinline autoplay muted></video>
+  </div>
+
+  <div class="test">
+    <h2>4. Partage de fichier</h2>
+    <button id="btn-partage">Tester l'enregistrement d'un fichier</button>
+    <p id="partage">…</p>
+  </div>
+
+<script>
+/** Écrit un verdict sans jamais interpréter le texte comme du HTML. */
+function verdict(id, reussi, texte) {
+  const element = document.getElementById(id);
+  element.textContent = texte;
+  element.className = reussi ? 'ok' : 'ko';
+}
+
+// 1. Mode d'affichage : « standalone » confirme que l'ajout à l'écran d'accueil masque Safari.
+const installe = window.matchMedia('(display-mode: standalone)').matches
+              || window.navigator.standalone === true;
+verdict('mode', installe,
+  installe
+    ? 'standalone — installée sur l\'écran d\'accueil'
+    : 'ouverte dans Safari — ajoutez la page à l\'écran d\'accueil puis rouvrez-la');
+
+// 2. Stockage : écrire puis relire une valeur prouve que la persistance fonctionne.
+const req = indexedDB.open('diagnostic', 1);
+req.onupgradeneeded = () => req.result.createObjectStore('t');
+req.onsuccess = () => {
+  const bd = req.result;
+  const ecriture = bd.transaction('t', 'readwrite');
+  ecriture.objectStore('t').put(Date.now(), 'dernier-passage');
+  ecriture.oncomplete = () => {
+    const lecture = bd.transaction('t').objectStore('t').get('dernier-passage');
+    lecture.onsuccess = () => {
+      verdict('stockage', true,
+        'écriture et lecture réussies (' + new Date(lecture.result).toLocaleString('fr-CA') + ')');
+    };
+  };
+};
+req.onerror = () => verdict('stockage', false, 'IndexedDB inaccessible');
+
+// 3. Caméra : getUserMedia exige un geste utilisateur et HTTPS.
+document.getElementById('btn-camera').onclick = async () => {
+  try {
+    const flux = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    document.getElementById('apercu').srcObject = flux;
+    verdict('camera', true, 'caméra arrière accessible — le scan de codes-barres est viable');
+  } catch (e) {
+    verdict('camera', false, 'échec : ' + e.name + ' — ' + e.message);
+  }
+};
+
+// 4. Partage : chemin utilisé plus tard pour enregistrer les sauvegardes dans Fichiers.
+document.getElementById('btn-partage').onclick = async () => {
+  const fichier = new File(['test'], 'test.json', { type: 'application/json' });
+  if (!navigator.canShare || !navigator.canShare({ files: [fichier] })) {
+    verdict('partage', false, 'partage de fichiers non supporté');
+    return;
+  }
+  try {
+    await navigator.share({ files: [fichier], title: 'Test' });
+    verdict('partage', true, 'feuille de partage ouverte — la sauvegarde vers Fichiers est viable');
+  } catch (e) {
+    e.name === 'AbortError'
+      ? verdict('partage', true, 'partage annulé par l\'utilisateur — le mécanisme fonctionne')
+      : verdict('partage', false, 'échec : ' + e.name);
+  }
+};
+</script>
+</body>
+</html>
