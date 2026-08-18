@@ -576,7 +576,9 @@ db.version(1).stores({
 
 - [ ] **Step 4: Écrire `src/db/disques.ts`**
 
-Seul module autorisé à toucher `db.disques` : tout le reste de l'app passe par ces cinq fonctions.
+Seul module autorisé à toucher `db.disques` : tout le reste de l'app passe par ces cinq fonctions. Aucun cast n'est
+nécessaire : `EntityTable<Disque, 'id'>` fait déjà de `id` un champ optionnel à l'insertion,
+donc `add()` accepte l'objet tel quel — et un champ erroné y serait bien détecté par `tsc`.
 
 ```ts
 import { db } from './db';
@@ -588,7 +590,7 @@ export async function ajouterDisque(nouveau: NouveauDisque): Promise<number> {
     ...nouveau,
     dateAjout: maintenant,
     dateModif: maintenant,
-  } as Disque);
+  });
 }
 
 export async function modifierDisque(id: number, champs: Partial<NouveauDisque>): Promise<void> {
