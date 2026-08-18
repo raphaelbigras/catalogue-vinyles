@@ -61,3 +61,23 @@ describe('listerDisques', () => {
     expect(await listerDisques()).toHaveLength(2);
   });
 });
+
+describe('flux d’édition du formulaire', () => {
+  // FormulaireEcran charge un Disque complet dans son état puis le renvoie tel quel à
+  // modifierDisque : l’objet transmis contient donc id, dateAjout et dateModif en plus
+  // des champs éditables. Ce test verrouille le fait qu’ils sont inoffensifs.
+  test('accepte un objet complet sans écraser dateAjout ni l’identifiant', async () => {
+    const id = await ajouterDisque(HARMONIUM);
+    const charge = await obtenirDisque(id);
+    const ajoutOriginal = charge!.dateAjout.getTime();
+
+    await new Promise((r) => setTimeout(r, 5));
+    await modifierDisque(id, { ...charge!, etatDisque: 'NM' } as never);
+
+    const apres = await obtenirDisque(id);
+    expect(apres!.etatDisque).toBe('NM');
+    expect(apres!.id).toBe(id);
+    expect(apres!.dateAjout.getTime()).toBe(ajoutOriginal);
+    expect(apres!.dateModif.getTime()).toBeGreaterThan(ajoutOriginal);
+  });
+});
