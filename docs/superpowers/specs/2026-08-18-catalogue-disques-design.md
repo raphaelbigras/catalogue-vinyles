@@ -46,8 +46,8 @@ section « Sauvegarde ».
 |---|---|---|
 | Build | Vite | 8.2.1 |
 | UI | React | 19.2.8 |
-| Langage | TypeScript | 7.0.2 |
-| Routage | React Router | 8.3.0 |
+| Langage | TypeScript | 6.0.3 (épinglé par le template Vite) |
+| Routage | React Router | 7.18.2 (la 8.x exige Node ≥ 22.22.0) |
 | Stockage | Dexie (IndexedDB) | 4.4.5 |
 | PWA / hors-ligne | vite-plugin-pwa (Workbox) | 1.3.0 |
 | Scan code-barres | zxing-wasm | 3.1.3 |
@@ -157,7 +157,11 @@ vendeur (`HTTP 404 : You must fill out your seller settings first`). Écarté po
 
 ### Conséquences de conception
 
-- Un en-tête `User-Agent` identifiant l'app est requis par Discogs sur chaque appel.
+- **Ne pas envoyer de `User-Agent`.** C'est un en-tête interdit dans `fetch` : le
+  navigateur le supprime et envoie le sien, que Discogs accepte. Vérifié depuis
+  Chromium le 2026-08-18 — un appel sans aucun en-tête renvoie `200`.
+- Un jeton invalide produit un `401` : cas réel d'un jeton mal collé, à traiter par un
+  message renvoyant vers les Réglages.
 - Deux requêtes par disque ajouté : une recherche, puis `marketplace/stats` sur le
   pressage retenu. Une troisième (`/releases/{id}`) seulement pour obtenir artiste et
   album propres.
