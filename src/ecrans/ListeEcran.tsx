@@ -74,7 +74,7 @@ export default function ListeEcran() {
       </ul>
 
       <Link
-        to="/ajouter"
+        to="/ajouter-choix"
         aria-label="Ajouter un disque"
         className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-6 flex h-16 w-16
                    items-center justify-center rounded-full bg-amber-500 text-3xl

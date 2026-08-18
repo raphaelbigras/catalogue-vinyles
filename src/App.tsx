@@ -3,6 +3,8 @@ import ListeEcran from './ecrans/ListeEcran';
 import FicheEcran from './ecrans/FicheEcran';
 import FormulaireEcran from './ecrans/FormulaireEcran';
 import ReglagesEcran from './ecrans/ReglagesEcran';
+import ChoixAjoutEcran from './ecrans/ChoixAjoutEcran';
+import RechercheEcran from './ecrans/RechercheEcran';
 
 export default function App() {
   return (
@@ -13,6 +15,8 @@ export default function App() {
         <Route path="/ajouter" element={<FormulaireEcran />} />
         <Route path="/disque/:id/modifier" element={<FormulaireEcran />} />
         <Route path="/reglages" element={<ReglagesEcran />} />
+        <Route path="/ajouter-choix" element={<ChoixAjoutEcran />} />
+        <Route path="/chercher" element={<RechercheEcran />} />
       </Routes>
     </div>
   );
