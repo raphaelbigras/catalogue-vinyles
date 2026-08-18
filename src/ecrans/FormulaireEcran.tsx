@@ -26,11 +26,13 @@ export default function FormulaireEcran() {
    */
   const preremplissage = (location.state ?? null) as Partial<NouveauDisque> | null;
 
-  const [disque, setDisque] = useState<NouveauDisque>(
-    preremplissage === null
-      ? DISQUE_VIDE
-      : { ...DISQUE_VIDE, ...preremplissage, valeurSource: 'discogs', valeurMaj: new Date() },
-  );
+  const [disque, setDisque] = useState<NouveauDisque>(() => {
+    if (preremplissage === null) return DISQUE_VIDE;
+    const rempli = { ...DISQUE_VIDE, ...preremplissage, valeurSource: 'discogs' as const };
+    // Ne dater que s'il y a vraiment une valeur : Discogs ne renvoie rien quand aucun
+    // exemplaire n'est en vente, et une date sans montant polluerait l'export.
+    return { ...rempli, valeurMaj: rempli.valeurEstimee === null ? null : new Date() };
+  });
   const [charge, setCharge] = useState(!modeEdition);
 
   useEffect(() => {
