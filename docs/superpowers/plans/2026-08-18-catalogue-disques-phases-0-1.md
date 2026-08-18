@@ -6,7 +6,7 @@
 
 **Architecture :** Application React statique buildée par Vite, déployée sur Vercel. Les données vivent dans IndexedDB via Dexie, sur l'appareil uniquement. La logique métier pure (calcul de valeur, recherche, tri, normalisation des accents) est isolée dans `src/lib/` et testée par Vitest ; l'accès aux données est isolé dans `src/db/` et testé contre `fake-indexeddb`. Les composants React ne contiennent aucune logique métier et ne sont pas testés automatiquement.
 
-**Tech Stack :** Vite 8, React 19, TypeScript 7, React Router 8, Dexie 4, vite-plugin-pwa 1, Tailwind CSS 4, Vitest 4, fake-indexeddb, sharp (génération d'icônes uniquement).
+**Tech Stack :** Vite 8, React 19, TypeScript 6, React Router 7, Dexie 4, vite-plugin-pwa 1, Tailwind CSS 4, Vitest 4, fake-indexeddb, sharp (génération d'icônes uniquement).
 
 **Spec de référence :** [docs/superpowers/specs/2026-08-18-catalogue-disques-design.md](../specs/2026-08-18-catalogue-disques-design.md)
 
@@ -576,7 +576,9 @@ db.version(1).stores({
 
 - [ ] **Step 4: Écrire `src/db/disques.ts`**
 
-Seul module autorisé à toucher `db.disques` : tout le reste de l'app passe par ces cinq fonctions.
+Seul module autorisé à toucher `db.disques` : tout le reste de l'app passe par ces cinq fonctions. Aucun cast n'est
+nécessaire : `EntityTable<Disque, 'id'>` fait déjà de `id` un champ optionnel à l'insertion,
+donc `add()` accepte l'objet tel quel — et un champ erroné y serait bien détecté par `tsc`.
 
 ```ts
 import { db } from './db';
@@ -588,7 +590,7 @@ export async function ajouterDisque(nouveau: NouveauDisque): Promise<number> {
     ...nouveau,
     dateAjout: maintenant,
     dateModif: maintenant,
-  } as Disque);
+  });
 }
 
 export async function modifierDisque(id: number, champs: Partial<NouveauDisque>): Promise<void> {

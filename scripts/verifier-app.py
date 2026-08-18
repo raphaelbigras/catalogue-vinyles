@@ -1,0 +1,177 @@
+"""Vérification de bout en bout de l'app, sur un viewport d'iPhone.
+
+Rejoue à la main ce qu'une utilisatrice fait : ajouter un disque, le chercher, le trier,
+le modifier, le supprimer, recharger. Complète les tests unitaires, qui ne couvrent que
+`src/lib/` et `src/db/` — le spec exclut volontairement les tests d'interface unitaires.
+
+Prérequis (hors package.json, ce sont des outils de développement) :
+    pip install playwright && python -m playwright install chromium
+
+Contre le serveur de dev :
+    npm run dev
+    python scripts/verifier-app.py
+
+Contre la production :
+    BASE_URL=https://catalogue-disques.vercel.app python scripts/verifier-app.py
+
+Piège à connaître : ne PAS attendre `networkidle` après une navigation côté client —
+aucune requête réseau n'est émise, l'attente se résout donc avant que React ait rendu.
+Ne pas attendre non plus un texte qui existe sur les deux écrans (un titre d'album est
+sur la fiche ET dans la liste) : l'attente se résoudrait sur la page qu'on quitte.
+"""
+import os
+from pathlib import Path
+from playwright.sync_api import sync_playwright, expect
+
+BASE = os.environ.get("BASE_URL", "http://localhost:5173")
+
+SORTIE = str(Path(__file__).resolve().parent.parent / "captures")
+Path(SORTIE).mkdir(exist_ok=True)
+resultats = []
+
+
+def verifier(numero, description, condition, detail=""):
+    resultats.append((numero, description, bool(condition), detail))
+    print(f"{'OK   ' if condition else 'ECHEC'} {numero}. {description} {detail}")
+
+
+def remplir(page, etiquette, valeur):
+    page.locator(f"label:has-text('{etiquette}') input").first.fill(valeur)
+
+
+def creer_disque(page, champs):
+    """Passe par le bouton +, remplit le formulaire, enregistre. `champs` = [(libellé, valeur)]."""
+    page.click("a[aria-label='Ajouter un disque']")
+    page.wait_for_selector("h1:has-text('Nouveau disque')")
+    for etiquette, valeur in champs:
+        remplir(page, etiquette, valeur)
+    page.click("button[type=submit]")
+    page.wait_for_selector("text=Inventaire n°")
+
+
+with sync_playwright() as p:
+    navigateur = p.chromium.launch(headless=True)
+    page = navigateur.new_page(viewport={"width": 393, "height": 852})  # iPhone 14 Pro
+    erreurs_console = []
+    page.on("console", lambda m: erreurs_console.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: erreurs_console.append(str(e)))
+
+    page.goto(BASE + "/")
+    page.wait_for_selector("h1:has-text('Ma collection')")
+
+    # 1. Liste vide
+    verifier(1, "La liste vide affiche le message d'accueil",
+             page.locator("text=Touchez + pour ajouter le premier").is_visible())
+    page.screenshot(path=f"{SORTIE}/01-liste-vide.png")
+
+    # 2. Le bouton + ouvre le formulaire
+    page.click("a[aria-label='Ajouter un disque']")
+    page.wait_for_selector("h1:has-text('Nouveau disque')")
+    verifier(2, "Le bouton + ouvre le formulaire", page.url.endswith("/ajouter"))
+    page.screenshot(path=f"{SORTIE}/02-formulaire.png", full_page=True)
+
+    # 3. Enregistrer redirige vers la fiche
+    remplir(page, "Artiste", "Félix Leclerc")
+    remplir(page, "Album", "Le tour de l'île")
+    remplir(page, "Label", "Philips")
+    remplir(page, "N° de catalogue", "6332 108")
+    remplir(page, "Pays", "Canada")
+    remplir(page, "Année", "1975")
+    remplir(page, "Valeur estimée (CAD)", "42.50")
+    page.click("button[type=submit]")
+    page.wait_for_selector("text=Inventaire n°")
+    verifier(3, "Enregistrer redirige vers la fiche du disque",
+             "/disque/1" in page.url, f"(url={page.url})")
+    page.screenshot(path=f"{SORTIE}/03-fiche.png", full_page=True)
+
+    # 4. Le disque apparaît dans la liste avec son numéro d'inventaire
+    page.click("text=Retour à la collection")
+    page.wait_for_selector("li")
+    numeros = page.locator("li span.w-10").all_inner_texts()
+    verifier(4, "Le disque apparaît dans la liste avec son n° d'inventaire",
+             numeros == ["#1"], f"(numéros affichés : {numeros})")
+
+    # 5. La valeur totale
+    total = page.locator("p.text-amber-500")
+    expect(total).to_have_text("42,50 $", use_inner_text=True)
+    verifier(5, "La valeur totale affiche le montant en CAD",
+             True, f"(affiché : {total.inner_text()!r})")
+
+    # 5.1 Multiplication par la quantité + jeu de données où tri artiste != tri valeur
+    creer_disque(page, [("Artiste", "Harmonium"), ("Album", "L'heptade"),
+                        ("Quantité", "2"), ("Valeur estimée (CAD)", "10")])
+    page.click("text=Retour à la collection")
+    page.wait_for_selector("li:nth-child(2)")
+    # Zappa : dernier alphabétiquement, mais valeur la plus haute -> les 2 tris divergent
+    creer_disque(page, [("Artiste", "Frank Zappa"), ("Album", "Hot Rats"),
+                        ("Valeur estimée (CAD)", "120")])
+    page.click("text=Retour à la collection")
+    page.wait_for_selector("li:nth-child(3)")
+    expect(page.locator("p.text-amber-500")).to_have_text("182,50 $", use_inner_text=True)
+    verifier(5.1, "La valeur totale multiplie par la quantité (42,50 + 10x2 + 120 = 182,50)",
+             True, f"(affiché : {page.locator('p.text-amber-500').inner_text()!r})")
+    page.screenshot(path=f"{SORTIE}/04-liste-remplie.png", full_page=True)
+
+    # 6. Recherche sans accents
+    page.fill("input[type=search]", "felix")
+    page.wait_for_selector("text=Le tour de l'île")
+    verifier(6, "Taper « felix » trouve « Félix »",
+             page.locator("li").count() == 1)
+    page.screenshot(path=f"{SORTIE}/05-recherche-sans-accent.png")
+    page.fill("input[type=search]", "")
+    page.wait_for_selector("text=Hot Rats")
+
+    # 7. Le tri réordonne
+    def ordre_affiche():
+        return page.locator("li span.truncate.font-medium").all_inner_texts()
+
+    page.select_option("select", "artiste")
+    page.wait_for_timeout(150)
+    par_artiste = ordre_affiche()
+    page.select_option("select", "valeur")
+    page.wait_for_timeout(150)
+    par_valeur = ordre_affiche()
+    verifier(7, "Changer le tri réordonne la liste",
+             par_artiste != par_valeur, f"\n        artiste={par_artiste}\n        valeur ={par_valeur}")
+
+    # 8. Modifier conserve les champs non touchés
+    page.click("text=Le tour de l'île")
+    page.wait_for_selector("text=Inventaire n°")
+    page.click("text=Modifier")
+    page.wait_for_selector("h1:has-text('Modifier le disque')")
+    page.locator("label:has-text('Notes') textarea").fill("Pochette légèrement cornée")
+    page.click("button[type=submit]")
+    page.wait_for_selector("text=Inventaire n°")
+    contenu = page.content()
+    attendus = ["6332 108", "Philips", "Canada", "1975", "42,50", "Pochette légèrement cornée"]
+    manquants = [x for x in attendus if x not in contenu]
+    verifier(8, "Modifier conserve les champs non touchés",
+             not manquants, f"(manquants : {manquants})" if manquants else "")
+    page.screenshot(path=f"{SORTIE}/06-fiche-modifiee.png", full_page=True)
+
+    # 9. Supprimer demande confirmation et ramène à la liste
+    dialogues = []
+    page.on("dialog", lambda d: (dialogues.append(d.message), d.accept()))
+    page.click("text=Supprimer")
+    page.wait_for_selector("h1:has-text('Ma collection')")
+    verifier(9, "Supprimer demande confirmation puis retire le disque",
+             len(dialogues) == 1 and page.locator("text=Le tour de l'île").count() == 0,
+             f"(confirmation : {dialogues[0][:45]!r}…)" if dialogues else "(aucune confirmation)")
+
+    # 10. Recharger conserve les données
+    page.reload()
+    page.wait_for_selector("h1:has-text('Ma collection')")
+    page.wait_for_selector("text=L'heptade")
+    verifier(10, "Recharger la page conserve les disques (IndexedDB)",
+             page.locator("li").count() == 2)
+
+    verifier(11, "Aucune erreur JavaScript dans la console",
+             len(erreurs_console) == 0, f"({erreurs_console})" if erreurs_console else "")
+
+    navigateur.close()
+
+echecs = [r for r in resultats if not r[2]]
+print(f"\n=== {len(resultats) - len(echecs)}/{len(resultats)} verifications reussies ===")
+for numero, description, _, detail in echecs:
+    print(f"  ECHEC {numero}. {description} {detail}")
+raise SystemExit(1 if echecs else 0)

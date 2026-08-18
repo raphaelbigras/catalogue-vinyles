@@ -218,3 +218,29 @@ Explicitement exclus de cette version :
 - comptes utilisateurs, multi-utilisateur
 - publication sur l'App Store
 - intégration de vente directe sur Discogs ou eBay
+
+## Résultats du diagnostic (phase 0)
+
+Testé le 2026-08-18 à 19:12 sur iPhone, via `https://catalogue-disques.vercel.app/diagnostic.html`
+ajoutée à l'écran d'accueil.
+
+| Test | Résultat | Verdict |
+|---|---|---|
+| Mode d'affichage | `standalone — installée sur l'écran d'accueil` | ✅ |
+| Stockage IndexedDB | `écriture et lecture réussies` | ✅ |
+| Caméra arrière | `caméra arrière accessible` | ✅ |
+| Partage de fichier | `feuille de partage ouverte` | ✅ |
+
+**Les quatre tests passent.** Les deux risques ouverts du projet sont donc levés :
+
+- La **phase 4 (scan de codes-barres)** est techniquement viable et reste au plan. Elle
+  garde sa faible priorité pour une autre raison, inchangée : les vinyles pressés avant
+  ~1980 n'ont pas de code-barres.
+- La **sauvegarde de la phase 3** passera bien par `navigator.share()` vers Fichiers /
+  iCloud Drive, sans repli sur un téléchargement classique.
+
+⚠️ **Réserve à lever avant d'investir dans la phase 4 :** l'aperçu caméra de la capture
+montre un écran de poste de travail, ce qui laisse penser que le test a été fait sur
+l'iPhone du développeur et non sur celui de l'utilisatrice finale. Les réglages de
+confidentialité et la version d'iOS varient d'un appareil à l'autre. Non bloquant pour
+les phases 2 et 3.

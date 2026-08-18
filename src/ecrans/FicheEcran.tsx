@@ -1,0 +1,71 @@
+import { Link, useNavigate, useParams } from 'react-router';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { obtenirDisque, supprimerDisque } from '../db/disques';
+import { ETATS_LIBELLES } from '../db/schema';
+import { formaterCAD } from '../lib/valeur';
+
+export default function FicheEcran() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const disque = useLiveQuery(async () => (await obtenirDisque(Number(id))) ?? null, [id]);
+
+  if (disque === undefined) return <p className="p-8 text-stone-500">Chargement…</p>;
+  if (disque === null) return <p className="p-8 text-stone-500">Disque introuvable.</p>;
+
+  async function effacer() {
+    if (!confirm(`Supprimer définitivement « ${disque!.album} » ?`)) return;
+    await supprimerDisque(Number(id));
+    navigate('/');
+  }
+
+  const lignes: [string, string][] = [
+    ['Artiste', disque.artiste],
+    ['Album', disque.album],
+    ['Année', disque.annee?.toString() ?? '—'],
+    ['Label', disque.label || '—'],
+    ['N° de catalogue', disque.noCatalogue || '—'],
+    ['Pays', disque.pays || '—'],
+    ['Format', disque.format || '—'],
+    ['État du disque', `${disque.etatDisque} — ${ETATS_LIBELLES[disque.etatDisque]}`],
+    ['État de la pochette', `${disque.etatPochette} — ${ETATS_LIBELLES[disque.etatPochette]}`],
+    ['Pochette générique', disque.pochetteGenerique ? 'Oui' : 'Non'],
+    ['Quantité', disque.quantite.toString()],
+    ['Valeur estimée', disque.valeurEstimee === null ? '—' : formaterCAD(disque.valeurEstimee)],
+    ['Notes', disque.notes || '—'],
+  ];
+
+  return (
+    <div className="p-4 pt-[calc(1rem+env(safe-area-inset-top))]">
+      <Link to="/" className="text-sm text-amber-500">← Retour à la collection</Link>
+
+      <h1 className="mt-3 text-xl font-semibold">{disque.album}</h1>
+      <p className="text-stone-400">{disque.artiste}</p>
+      <p className="mt-1 text-sm text-stone-500">Inventaire n° {disque.id}</p>
+
+      <dl className="mt-6 divide-y divide-stone-800">
+        {lignes.map(([etiquette, valeur]) => (
+          <div key={etiquette} className="flex gap-4 py-3">
+            <dt className="w-40 shrink-0 text-sm text-stone-400">{etiquette}</dt>
+            <dd className="min-w-0 flex-1 text-sm">{valeur}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="mt-6 flex gap-3 pb-8">
+        <button
+          type="button"
+          onClick={effacer}
+          className="flex-1 rounded-lg border border-red-900 p-4 text-base text-red-400"
+        >
+          Supprimer
+        </button>
+        <Link
+          to={`/disque/${disque.id}/modifier`}
+          className="flex-1 rounded-lg bg-amber-500 p-4 text-center text-base font-semibold text-stone-900"
+        >
+          Modifier
+        </Link>
+      </div>
+    </div>
+  );
+}
