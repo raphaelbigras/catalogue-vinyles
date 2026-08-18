@@ -1,13 +1,37 @@
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { obtenirDisque, supprimerDisque } from '../db/disques';
+import { modifierDisque, obtenirDisque, supprimerDisque } from '../db/disques';
 import { ETATS_LIBELLES } from '../db/schema';
+import { obtenirPrix } from '../discogs/api';
+import { ErreurDiscogs } from '../discogs/client';
 import { formaterCAD } from '../lib/valeur';
 
 export default function FicheEcran() {
   const { id } = useParams();
   const navigate = useNavigate();
   const disque = useLiveQuery(async () => (await obtenirDisque(Number(id))) ?? null, [id]);
+  const [messagePrix, setMessagePrix] = useState<string | null>(null);
+
+  async function rafraichirPrix() {
+    setMessagePrix('Consultation de Discogs…');
+    try {
+      const prix = await obtenirPrix(disque!.discogsReleaseId!);
+      if (prix.valeur === null) {
+        setMessagePrix('Aucun exemplaire en vente en ce moment — valeur inchangée.');
+        return;
+      }
+      await modifierDisque(Number(id), {
+        valeurEstimee: prix.valeur,
+        valeurSource: 'discogs',
+        valeurMaj: new Date(),
+        discogsNumForSale: prix.nombreEnVente,
+      });
+      setMessagePrix('Valeur mise à jour.');
+    } catch (e) {
+      setMessagePrix(e instanceof ErreurDiscogs ? e.message : 'Une erreur est survenue.');
+    }
+  }
 
   if (disque === undefined) return <p className="p-8 text-stone-500">Chargement…</p>;
   if (disque === null) return <p className="p-8 text-stone-500">Disque introuvable.</p>;
@@ -30,7 +54,13 @@ export default function FicheEcran() {
     ['État de la pochette', `${disque.etatPochette} — ${ETATS_LIBELLES[disque.etatPochette]}`],
     ['Pochette générique', disque.pochetteGenerique ? 'Oui' : 'Non'],
     ['Quantité', disque.quantite.toString()],
-    ['Valeur estimée', disque.valeurEstimee === null ? '—' : formaterCAD(disque.valeurEstimee)],
+    ['Valeur estimée', disque.valeurEstimee === null
+      ? '—'
+      : formaterCAD(disque.valeurEstimee)
+        + (disque.valeurMaj === null
+          ? ''
+          : ` (${disque.valeurSource === 'discogs' ? 'Discogs' : 'saisie'}, `
+            + `${disque.valeurMaj.toLocaleDateString('fr-CA')})`)],
     ['Notes', disque.notes || '—'],
   ];
 
@@ -50,6 +80,21 @@ export default function FicheEcran() {
           </div>
         ))}
       </dl>
+
+      {disque.discogsReleaseId !== null && (
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={rafraichirPrix}
+            className="w-full rounded-lg bg-stone-800 p-4 text-base"
+          >
+            Rafraîchir la valeur depuis Discogs
+          </button>
+          {messagePrix !== null && (
+            <p className="mt-2 text-center text-sm text-stone-400">{messagePrix}</p>
+          )}
+        </div>
+      )}
 
       <div className="mt-6 flex gap-3 pb-8">
         <button
