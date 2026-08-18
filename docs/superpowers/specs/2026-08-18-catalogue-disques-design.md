@@ -118,22 +118,55 @@ L'API a été testée en direct le 2026-08-18. Résultats confirmés :
   (en-tête `authorization` autorisé). Une PWA statique appelle donc l'API directement :
   **aucun proxy ni fonction serverless nécessaire**.
 - `GET /database/search?barcode=…` fonctionne **sans token** (testé, 200 avec résultats).
-- `GET /releases/{id}?curr_abbr=CAD` retourne `artists[].name`, `title`, `year`,
-  `country`, `labels[].name`, `labels[].catno`, `formats[].name`, `lowest_price`,
-  `num_for_sale`.
-- **Rate limit mesuré : 25 req/min sans token** (en-tête `x-discogs-ratelimit`),
-  60 avec token.
+- La recherche renvoie **déjà** `catno`, `country`, `year`, `label[]`, `format[]` et
+  `title` (sous la forme « Artiste - Album »). L'écran de sélection du pressage se
+  construit donc à partir de la seule réponse de recherche, sans requête par candidat.
+- `GET /releases/{id}` retourne des données plus propres pour le disque retenu :
+  `artists[].name` et `title` séparés, et `labels[]` sans les usines de pressage ni les
+  sociétés de gestion qui polluent le champ `label` de la recherche.
+- **Rate limit mesuré : 25 req/min sans token, 60 avec token** (en-tête
+  `x-discogs-ratelimit`, les deux valeurs observées).
+
+### ⚠️ Le prix ne vient PAS de `/releases/`
+
+Vérifié le 2026-08-18 : sur `GET /releases/{id}`, le paramètre `curr_abbr` est
+**silencieusement ignoré**. Le champ `lowest_price` est exprimé dans la devise réglée
+sur le compte Discogs appelant (ou USD en anonyme). Trois appels avec `curr_abbr=USD`,
+`CAD` et `EUR` ont renvoyé exactement la même valeur.
+
+Bâtir l'estimation là-dessus afficherait des devises étrangères étiquetées « CAD » —
+une erreur de 35 % environ sur chaque disque et sur le total de la collection. Inacceptable
+pour une app dont le but est d'estimer un héritage à revendre.
+
+**Le prix vient donc de `GET /marketplace/stats/{id}?curr_abbr=CAD`**, qui lui respecte
+le paramètre et retourne la devise explicitement :
+
+```json
+{"num_for_sale": 35, "lowest_price": {"value": 5.0, "currency": "CAD"}, "blocked_from_sale": false}
+```
+
+Le même appel en `USD` renvoie `3.6` — la conversion est donc réelle. Cet endpoint
+fonctionne **sans token**. Le code doit **vérifier** le champ `currency` de la réponse et
+refuser d'enregistrer une valeur si ce n'est pas `CAD`, plutôt que de faire confiance au
+paramètre envoyé.
+
+Note : `/marketplace/price_suggestions/{id}`, qui donnerait un prix **par état** (VG+, NM…)
+— idéal ici puisque chaque disque est gradé — exige que le compte ait rempli ses réglages
+vendeur (`HTTP 404 : You must fill out your seller settings first`). Écarté pour l'instant,
+à reconsidérer si le compte Discogs devient vendeur.
 
 ### Conséquences de conception
 
 - Un en-tête `User-Agent` identifiant l'app est requis par Discogs sur chaque appel.
-- Le rafraîchissement des prix en lot passe par une **file d'attente throttlée**
-  (~1 requête / 2,5 s) avec barre de progression et annulation. Sans throttle, Discogs
-  coupe autour du 26e disque.
-- Le **token est optionnel**, saisi dans les Réglages, stocké localement, jamais dans le
-  repo. L'app fonctionne sans, mais le champ existe comme assurance si Discogs durcit
-  l'accès anonyme.
-- La devise est forcée à **CAD** via `curr_abbr`.
+- Deux requêtes par disque ajouté : une recherche, puis `marketplace/stats` sur le
+  pressage retenu. Une troisième (`/releases/{id}`) seulement pour obtenir artiste et
+  album propres.
+- Le rafraîchissement des prix en lot passe par une **file d'attente throttlée** avec
+  barre de progression et annulation : ~1 requête / 2,5 s sans token, ~1 / 1,1 s avec.
+  Sans throttle, Discogs coupe autour du 26e disque.
+- Le **token reste optionnel** et ne change rien à l'exactitude des données. Il apporte
+  les vignettes de pochette (absentes en anonyme : `thumb` revient vide) et double la
+  cadence. Saisi dans les Réglages, stocké localement, jamais dans le repo.
 
 ## Écrans
 
