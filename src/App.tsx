@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router';
 import ListeEcran from './ecrans/ListeEcran';
 import FicheEcran from './ecrans/FicheEcran';
 import FormulaireEcran from './ecrans/FormulaireEcran';
+import ReglagesEcran from './ecrans/ReglagesEcran';
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
         <Route path="/disque/:id" element={<FicheEcran />} />
         <Route path="/ajouter" element={<FormulaireEcran />} />
         <Route path="/disque/:id/modifier" element={<FormulaireEcran />} />
+        <Route path="/reglages" element={<ReglagesEcran />} />
       </Routes>
     </div>
   );
