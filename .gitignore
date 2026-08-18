@@ -25,3 +25,6 @@ dist-ssr
 
 .vercel
 captures/
+
+# Jeton Discogs local, ne doit jamais etre commite
+.discogs-token
