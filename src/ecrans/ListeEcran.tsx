@@ -28,6 +28,9 @@ export default function ListeEcran() {
             <span className="text-sm text-stone-400">
               {disques.length} {disques.length > 1 ? 'disques' : 'disque'}
             </span>
+            <Link to="/sauvegarde" className="text-sm text-amber-500">
+              Sauvegarder
+            </Link>
             <Link to="/reglages" aria-label="Réglages" className="text-sm text-amber-500">
               Réglages
             </Link>

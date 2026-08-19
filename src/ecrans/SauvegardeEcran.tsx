@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { db } from '../db/db';
 import { listerDisques } from '../db/disques';
-import { versCSV, versTexteAnnonce } from '../lib/csv';
+import { versCSV } from '../lib/csv';
 import { nomHorodate, proposerFichier } from '../lib/partage';
 import { deserialiser, ErreurSauvegarde, serialiser } from '../lib/sauvegarde';
 import {
@@ -41,15 +41,6 @@ export default function SauvegardeEcran() {
       nomHorodate('collection-disques', 'csv'),
       versCSV(await listerDisques()),
       'text/csv',
-    );
-  }
-
-  async function exporterAnnonce() {
-    setErreur(null);
-    await proposerFichier(
-      nomHorodate('annonce-disques', 'txt'),
-      versTexteAnnonce(await listerDisques()),
-      'text/plain',
     );
   }
 
@@ -116,13 +107,10 @@ export default function SauvegardeEcran() {
         >
           Tableur (CSV pour Excel)
         </button>
-        <button
-          type="button"
-          onClick={exporterAnnonce}
-          className="w-full rounded-lg bg-stone-800 p-4 text-base"
-        >
-          Texte pour une annonce
-        </button>
+        <p className="text-sm text-stone-400">
+          Pour le texte d'une annonce, ouvrez le disque concerné : chaque fiche a son
+          propre bouton « Copier l'annonce ».
+        </p>
       </div>
 
       <h2 className="mt-8 text-lg font-semibold">Restaurer</h2>
