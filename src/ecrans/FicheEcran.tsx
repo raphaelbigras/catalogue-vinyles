@@ -5,6 +5,8 @@ import { modifierDisque, obtenirDisque, supprimerDisque } from '../db/disques';
 import { ETATS_LIBELLES } from '../db/schema';
 import { obtenirPrix } from '../discogs/api';
 import { ErreurDiscogs } from '../discogs/client';
+import { versTexteAnnonce } from '../lib/csv';
+import { copierTexte } from '../lib/partage';
 import { formaterCAD } from '../lib/valeur';
 
 export default function FicheEcran() {
@@ -12,6 +14,7 @@ export default function FicheEcran() {
   const navigate = useNavigate();
   const disque = useLiveQuery(async () => (await obtenirDisque(Number(id))) ?? null, [id]);
   const [messagePrix, setMessagePrix] = useState<string | null>(null);
+  const [copie, setCopie] = useState(false);
 
   async function rafraichirPrix() {
     setMessagePrix('Consultation de Discogs…');
@@ -64,6 +67,9 @@ export default function FicheEcran() {
     ['Notes', disque.notes || '—'],
   ];
 
+  // versTexteAnnonce travaille sur une liste ; ici on ne lui passe que ce disque.
+  const annonce = versTexteAnnonce([disque]);
+
   return (
     <div className="p-4 pt-[calc(1rem+env(safe-area-inset-top))]">
       <Link to="/" className="text-sm text-amber-500">← Retour à la collection</Link>
@@ -95,6 +101,21 @@ export default function FicheEcran() {
           )}
         </div>
       )}
+
+      <h2 className="mt-8 text-lg font-semibold">Annonce</h2>
+      <p className="mt-1 text-sm text-stone-400">
+        À coller dans Marketplace, Kijiji ou une petite annonce.
+      </p>
+      <p className="mt-3 rounded-lg bg-stone-800 p-3 text-sm">{annonce}</p>
+      <button
+        type="button"
+        onClick={async () => {
+          setCopie(await copierTexte(annonce));
+        }}
+        className="mt-3 w-full rounded-lg border border-amber-600 p-4 text-base text-amber-500"
+      >
+        {copie ? 'Copié ✓' : "Copier l'annonce"}
+      </button>
 
       <div className="mt-6 flex gap-3 pb-8">
         <button

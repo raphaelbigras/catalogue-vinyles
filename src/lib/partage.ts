@@ -44,3 +44,32 @@ export function nomHorodate(prefixe: string, extension: string): string {
   const date = new Date().toISOString().slice(0, 10);
   return `${prefixe}-${date}.${extension}`;
 }
+
+/**
+ * Met un texte dans le presse-papiers.
+ *
+ * Pour publier une annonce depuis un iPhone, copier est le seul geste utile :
+ * télécharger un fichier obligerait à le rouvrir puis à en sélectionner le contenu.
+ * L'API Clipboard exige un geste de l'utilisatrice — n'appeler que depuis un clic.
+ */
+export async function copierTexte(texte: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(texte);
+    return true;
+  } catch {
+    return copierParSelection(texte);
+  }
+}
+
+/** Repli pour les navigateurs sans API Clipboard. */
+function copierParSelection(texte: string): boolean {
+  const zone = document.createElement('textarea');
+  zone.value = texte;
+  zone.style.position = 'fixed';
+  zone.style.opacity = '0';
+  document.body.appendChild(zone);
+  zone.select();
+  const reussi = document.execCommand('copy');
+  document.body.removeChild(zone);
+  return reussi;
+}
