@@ -217,6 +217,44 @@ with sync_playwright() as p:
     verifier(15, "Le lot epargne les valeurs saisies a la main",
              bilan.startswith("1 disque sur 1"), f"({bilan!r})")
 
+    # 16-17. Aller-retour sauvegarde -> restauration.
+    # On ne supprime PAS la base IndexedDB : Dexie y tient une connexion ouverte et
+    # deleteDatabase resterait bloque. On efface un disque par l'interface, ce qui est
+    # de toute facon le scenario reel qu'on veut couvrir.
+    page.goto(BASE + "/")
+    page.wait_for_selector("li")
+    avant = sorted(page.locator("li span.truncate.font-medium").all_inner_texts())
+
+    page.goto(BASE + "/sauvegarde")
+    page.wait_for_selector("h1:has-text('Sauvegarde')")
+    with page.expect_download() as telechargement:
+        page.click("text=Sauvegarder maintenant")
+    chemin = telechargement.value.path()
+    contenu = Path(chemin).read_text(encoding="utf-8")
+    verifier(16, "La sauvegarde produit un fichier relisible",
+             '"version": 1' in contenu and '"disques"' in contenu,
+             f"({len(contenu)} octets, {len(avant)} disques)")
+
+    page.goto(BASE + "/")
+    page.wait_for_selector("li")
+    page.locator("li a").first.click()
+    page.wait_for_selector("text=Inventaire n°")
+    page.click("text=Supprimer")
+    page.wait_for_selector("h1:has-text('Ma collection')")
+    ampute = sorted(page.locator("li span.truncate.font-medium").all_inner_texts())
+
+    page.goto(BASE + "/sauvegarde")
+    page.wait_for_selector("h1:has-text('Sauvegarde')")
+    page.set_input_files("input[type=file]", chemin)
+    page.wait_for_selector("text=restauré", timeout=20000)
+
+    page.goto(BASE + "/")
+    page.wait_for_selector("li")
+    apres = sorted(page.locator("li span.truncate.font-medium").all_inner_texts())
+    verifier(17, "La restauration redonne exactement la collection sauvegardee",
+             apres == avant and len(ampute) == len(avant) - 1,
+             f"(avant={len(avant)} ampute={len(ampute)} apres={len(apres)})")
+
     verifier(11, "Aucune erreur JavaScript dans la console",
              len(erreurs_console) == 0, f"({erreurs_console})" if erreurs_console else "")
 
