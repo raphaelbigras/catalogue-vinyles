@@ -1,5 +1,5 @@
 import { afterEach, expect, describe, test, vi } from 'vitest';
-import { chercher, obtenirFiche, obtenirPrix } from './api';
+import { chercher, chercherParCodeBarres, obtenirFiche, obtenirPrix } from './api';
 
 function doublureFetch(corpsParUrl: Record<string, unknown>) {
   return vi.fn((url: string) => {
@@ -35,15 +35,6 @@ describe('chercher', () => {
 
     const url = f.mock.calls[0][0] as string;
     expect(url).toContain(encodeURIComponent("L'Heptade & Cie"));
-  });
-
-  test('cherche par code-barres quand on le lui demande', async () => {
-    const f = doublureFetch({ '/database/search': { results: [] } });
-    vi.stubGlobal('fetch', f);
-
-    await chercher('602537351169', { parCodeBarres: true });
-
-    expect(f.mock.calls[0][0] as string).toContain('barcode=602537351169');
   });
 
   test('retourne une liste vide quand Discogs ne renvoie pas de résultats', async () => {
@@ -85,5 +76,56 @@ describe('obtenirFiche', () => {
     expect(champs.artiste).toBe('Artiste');
     expect(champs.album).toBe('Album');
     expect(champs.discogsReleaseId).toBe(5);
+  });
+});
+
+describe('chercherParCodeBarres', () => {
+  test('ne filtre PAS sur le format : un code-barres est déjà précis', async () => {
+    const f = doublureFetch({ '/database/search': { results: [{ id: 1, title: 'A - B' }] } });
+    vi.stubGlobal('fetch', f);
+
+    await chercherParCodeBarres('4006381333931');
+
+    const url = f.mock.calls[0][0] as string;
+    expect(url).toContain('barcode=4006381333931');
+    expect(url).not.toContain('format=Vinyl');
+  });
+
+  test('s\'arrête à la première variante qui donne un résultat', async () => {
+    const f = doublureFetch({ '/database/search': { results: [{ id: 1, title: 'A - B' }] } });
+    vi.stubGlobal('fetch', f);
+
+    const pressages = await chercherParCodeBarres('602537351169');
+
+    expect(pressages).toHaveLength(1);
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  test('essaie la variante suivante quand la première ne donne rien', async () => {
+    let appels = 0;
+    vi.stubGlobal('fetch', vi.fn(() => {
+      appels += 1;
+      const results = appels === 1 ? [] : [{ id: 7, title: 'Trouve - Enfin' }];
+      return Promise.resolve(new Response(JSON.stringify({ results })));
+    }));
+
+    const pressages = await chercherParCodeBarres('0602537351169');
+
+    expect(appels).toBe(2);
+    expect(pressages[0].releaseId).toBe(7);
+  });
+
+  test('retourne une liste vide quand aucune variante ne donne rien', async () => {
+    vi.stubGlobal('fetch', doublureFetch({ '/database/search': { results: [] } }));
+
+    expect(await chercherParCodeBarres('602537351169')).toEqual([]);
+  });
+
+  test('n\'appelle pas Discogs pour un code invalide', async () => {
+    const f = doublureFetch({ '/database/search': { results: [] } });
+    vi.stubGlobal('fetch', f);
+
+    expect(await chercherParCodeBarres('PGF 90348')).toEqual([]);
+    expect(f).not.toHaveBeenCalled();
   });
 });
