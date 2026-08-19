@@ -198,6 +198,25 @@ with sync_playwright() as p:
              all(v.strip() != "" for v in rempli.values()), f"({rempli})")
     page.screenshot(path=f"{SORTIE}/09-preremplissage.png", full_page=True)
 
+    # 14-15. Rafraichissement en lot.
+    # Le formulaire prerempli de l'etape 13 est encore ouvert et NON enregistre :
+    # il faut le sauver, sinon aucun disque issu de Discogs n'existe et le lot serait vide.
+    page.click("button[type=submit]")
+    page.wait_for_selector("text=Inventaire n°")
+
+    page.goto(BASE + "/reglages")
+    page.wait_for_selector("h1:has-text('Réglages')")
+    page.click("text=Rafraîchir toutes les valeurs")
+    page.wait_for_selector("text=consulté", timeout=90000)
+    bilan = page.locator("p.bg-stone-800").last.inner_text()
+    verifier(14, "Le rafraichissement en lot rapporte un bilan",
+             "consulté" in bilan, f"({bilan!r})")
+    page.screenshot(path=f"{SORTIE}/10-rafraichissement.png", full_page=True)
+
+    # Les disques saisis a la main gardent leur valeur : seul le disque Discogs est compte.
+    verifier(15, "Le lot epargne les valeurs saisies a la main",
+             bilan.startswith("1 disque sur 1"), f"({bilan!r})")
+
     verifier(11, "Aucune erreur JavaScript dans la console",
              len(erreurs_console) == 0, f"({erreurs_console})" if erreurs_console else "")
 
