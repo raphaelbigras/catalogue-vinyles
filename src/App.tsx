@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router';
 import ListeEcran from './ecrans/ListeEcran';
+import SauvegardeEcran from './ecrans/SauvegardeEcran';
 import FicheEcran from './ecrans/FicheEcran';
 import FormulaireEcran from './ecrans/FormulaireEcran';
 import ReglagesEcran from './ecrans/ReglagesEcran';
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/ajouter" element={<FormulaireEcran />} />
         <Route path="/disque/:id/modifier" element={<FormulaireEcran />} />
         <Route path="/reglages" element={<ReglagesEcran />} />
+        <Route path="/sauvegarde" element={<SauvegardeEcran />} />
         <Route path="/ajouter-choix" element={<ChoixAjoutEcran />} />
         <Route path="/chercher" element={<RechercheEcran />} />
       </Routes>

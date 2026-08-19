@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import CarteDisque from '../composants/CarteDisque';
 import { listerDisques } from '../db/disques';
 import { filtrerDisques, trierDisques, TRIS_LIBELLES, type Tri } from '../lib/recherche';
+import { modificationsEnAttente } from '../lib/suivi-sauvegarde';
 import { formaterCAD, valeurTotale } from '../lib/valeur';
 
 export default function ListeEcran() {
@@ -36,6 +37,18 @@ export default function ListeEcran() {
         <p className="px-4 text-2xl font-semibold text-amber-500">
           {formaterCAD(valeurTotale(disques))}
         </p>
+
+        {/* Seuil de 10 delibere : un bandeau des la premiere saisie serait ignore
+            au bout d'une journee. A dix disques, il correspond a un vrai travail. */}
+        {modificationsEnAttente() >= 10 && (
+          <Link
+            to="/sauvegarde"
+            className="mx-4 mt-2 block rounded-lg bg-amber-500/15 p-3 text-sm text-amber-500"
+          >
+            {modificationsEnAttente()} modifications depuis votre dernière sauvegarde.
+            Touchez ici pour sauvegarder.
+          </Link>
+        )}
 
         <div className="flex gap-2 p-4">
           <input
