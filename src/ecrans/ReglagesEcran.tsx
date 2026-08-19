@@ -153,6 +153,14 @@ export default function ReglagesEcran() {
       {bilan !== null && (
         <p className="mt-4 rounded-lg bg-stone-800 p-3 text-sm text-stone-400">{bilan}</p>
       )}
+
+      <hr className="my-8 border-stone-800" />
+      <Link
+        to="/sauvegarde"
+        className="block rounded-lg bg-stone-800 p-4 text-center text-base"
+      >
+        Sauvegarde et exports
+      </Link>
     </div>
   );
 }
