@@ -255,6 +255,21 @@ with sync_playwright() as p:
              apres == avant and len(ampute) == len(avant) - 1,
              f"(avant={len(avant)} ampute={len(ampute)} apres={len(apres)})")
 
+    # 18-19. Ecran de scan. Playwright n'a pas de vraie camera : on verifie ce qui est
+    # verifiable automatiquement, dont l'absence de requete vers un CDN tiers.
+    requetes_cdn = []
+    page.on("request", lambda r: requetes_cdn.append(r.url)
+            if "jsdelivr" in r.url or "unpkg" in r.url else None)
+    page.goto(BASE + "/scanner")
+    page.wait_for_selector("h1:has-text('Scanner un code-barres')")
+    page.wait_for_timeout(3000)
+    corps = page.content()
+    verifier(18, "L'ecran de scan se charge et propose un repli sans camera",
+             "cherchez-le par son titre" in corps or "Chercher par titre" in corps)
+    verifier(19, "Le binaire du scanner ne vient d'aucun CDN tiers",
+             len(requetes_cdn) == 0, f"({requetes_cdn})" if requetes_cdn else "")
+    page.screenshot(path=f"{SORTIE}/11-scan.png", full_page=True)
+
     verifier(11, "Aucune erreur JavaScript dans la console",
              len(erreurs_console) == 0, f"({erreurs_console})" if erreurs_console else "")
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import CartePressage from '../composants/CartePressage';
 import { chercher, obtenirFiche, obtenirPrix } from '../discogs/api';
 import { ErreurDiscogs } from '../discogs/client';
@@ -7,8 +7,12 @@ import type { Pressage } from '../discogs/types';
 
 export default function RechercheEcran() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Le scan transmet directement ses pressages : inutile de refaire la recherche.
+  const depuisScan = (location.state ?? null) as { pressages?: Pressage[]; code?: string } | null;
+
   const [requete, setRequete] = useState('');
-  const [pressages, setPressages] = useState<Pressage[] | null>(null);
+  const [pressages, setPressages] = useState<Pressage[] | null>(depuisScan?.pressages ?? null);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -85,6 +89,13 @@ export default function RechercheEcran() {
             <Link to="/ajouter" className="text-amber-500">saisissez-le à la main</Link>.
           </p>
         </div>
+      )}
+
+      {depuisScan?.code !== undefined && (
+        <p className="mt-4 rounded-lg bg-stone-800 p-3 text-sm text-stone-400">
+          Résultats pour le code-barres{' '}
+          <span className="font-mono text-amber-500">{depuisScan.code}</span>.
+        </p>
       )}
 
       {!enCours && pressages !== null && pressages.length > 0 && (
