@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import ChampEtat from '../composants/ChampEtat';
 import { ajouterDisque, modifierDisque, obtenirDisque } from '../db/disques';
 import { DISQUE_VIDE, type NouveauDisque } from '../db/schema';
@@ -18,7 +18,21 @@ export default function FormulaireEcran() {
   const { id } = useParams();
   const navigate = useNavigate();
   const modeEdition = id !== undefined;
-  const [disque, setDisque] = useState<NouveauDisque>(DISQUE_VIDE);
+  const location = useLocation();
+
+  /**
+   * L'écran de recherche transmet les champs Discogs par l'état de navigation plutôt que
+   * par l'URL : ils sont trop nombreux et contiennent des apostrophes et des accents.
+   */
+  const preremplissage = (location.state ?? null) as Partial<NouveauDisque> | null;
+
+  const [disque, setDisque] = useState<NouveauDisque>(() => {
+    if (preremplissage === null) return DISQUE_VIDE;
+    const rempli = { ...DISQUE_VIDE, ...preremplissage, valeurSource: 'discogs' as const };
+    // Ne dater que s'il y a vraiment une valeur : Discogs ne renvoie rien quand aucun
+    // exemplaire n'est en vente, et une date sans montant polluerait l'export.
+    return { ...rempli, valeurMaj: rempli.valeurEstimee === null ? null : new Date() };
+  });
   const [charge, setCharge] = useState(!modeEdition);
 
   useEffect(() => {
@@ -51,6 +65,12 @@ export default function FormulaireEcran() {
       <h1 className="text-xl font-semibold">
         {modeEdition ? 'Modifier le disque' : 'Nouveau disque'}
       </h1>
+
+      {preremplissage !== null && (
+        <p className="rounded-lg bg-stone-800 p-3 text-sm text-stone-400">
+          Rempli depuis Discogs. Vérifiez, puis indiquez l'état du disque et de la pochette.
+        </p>
+      )}
 
       {CHAMPS_TEXTE.map(({ cle, etiquette }) => (
         <label key={cle} className="block">

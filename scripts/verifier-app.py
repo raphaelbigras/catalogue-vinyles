@@ -42,6 +42,8 @@ def remplir(page, etiquette, valeur):
 def creer_disque(page, champs):
     """Passe par le bouton +, remplit le formulaire, enregistre. `champs` = [(libellé, valeur)]."""
     page.click("a[aria-label='Ajouter un disque']")
+    page.wait_for_selector("h1:has-text('Ajouter un disque')")
+    page.click("text=Saisir à la main")
     page.wait_for_selector("h1:has-text('Nouveau disque')")
     for etiquette, valeur in champs:
         remplir(page, etiquette, valeur)
@@ -66,8 +68,12 @@ with sync_playwright() as p:
 
     # 2. Le bouton + ouvre le formulaire
     page.click("a[aria-label='Ajouter un disque']")
+    page.wait_for_selector("h1:has-text('Ajouter un disque')")
+    choix_ok = page.url.endswith("/ajouter-choix")
+    page.click("text=Saisir à la main")
     page.wait_for_selector("h1:has-text('Nouveau disque')")
-    verifier(2, "Le bouton + ouvre le formulaire", page.url.endswith("/ajouter"))
+    verifier(2, "Le + ouvre le choix d'ajout, puis la saisie manuelle",
+             choix_ok and page.url.endswith("/ajouter"))
     page.screenshot(path=f"{SORTIE}/02-formulaire.png", full_page=True)
 
     # 3. Enregistrer redirige vers la fiche
@@ -164,6 +170,33 @@ with sync_playwright() as p:
     page.wait_for_selector("text=L'heptade")
     verifier(10, "Recharger la page conserve les disques (IndexedDB)",
              page.locator("li").count() == 2)
+
+    # 12-13. Parcours Discogs complet. Appelle la vraie API : plus lent, dependant du reseau.
+    page.goto(BASE + "/")
+    page.wait_for_selector("h1:has-text('Ma collection')")
+    page.click("a[aria-label='Ajouter un disque']")
+    page.wait_for_selector("h1:has-text('Ajouter un disque')")
+    page.click("text=Chercher sur Discogs")
+    page.wait_for_selector("h1:has-text('Chercher un disque')")
+    page.fill("input[type=search]", "Harmonium Heptade")
+    page.click("button[type=submit]")
+    page.wait_for_selector("li button", timeout=25000)
+
+    catalogues = page.locator("li button span.font-mono").all_inner_texts()
+    verifier(12, "La recherche Discogs retourne plusieurs pressages distincts",
+             len(catalogues) >= 2 and len(set(catalogues)) >= 2,
+             f"(n° de catalogue : {catalogues[:4]})")
+    page.screenshot(path=f"{SORTIE}/08-pressages.png", full_page=True)
+
+    page.locator("li button").first.click()
+    page.wait_for_selector("h1:has-text('Nouveau disque')", timeout=25000)
+    page.wait_for_selector("text=Rempli depuis Discogs")
+
+    rempli = {e: page.locator(f"label:has-text('{e}') input").first.input_value()
+              for e in ["Artiste", "Album", "N° de catalogue", "Pays", "Année"]}
+    verifier(13, "Le formulaire est prerempli depuis Discogs",
+             all(v.strip() != "" for v in rempli.values()), f"({rempli})")
+    page.screenshot(path=f"{SORTIE}/09-preremplissage.png", full_page=True)
 
     verifier(11, "Aucune erreur JavaScript dans la console",
              len(erreurs_console) == 0, f"({erreurs_console})" if erreurs_console else "")

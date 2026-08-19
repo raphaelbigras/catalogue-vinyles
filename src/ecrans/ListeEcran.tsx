@@ -23,8 +23,13 @@ export default function ListeEcran() {
       <header className="sticky top-0 z-10 bg-stone-900 pt-[env(safe-area-inset-top)]">
         <div className="flex items-baseline justify-between px-4 pt-4">
           <h1 className="text-xl font-semibold">Ma collection</h1>
-          <span className="text-sm text-stone-400">
-            {disques.length} {disques.length > 1 ? 'disques' : 'disque'}
+          <span className="flex items-baseline gap-3">
+            <span className="text-sm text-stone-400">
+              {disques.length} {disques.length > 1 ? 'disques' : 'disque'}
+            </span>
+            <Link to="/reglages" aria-label="Réglages" className="text-sm text-amber-500">
+              Réglages
+            </Link>
           </span>
         </div>
 
@@ -69,7 +74,7 @@ export default function ListeEcran() {
       </ul>
 
       <Link
-        to="/ajouter"
+        to="/ajouter-choix"
         aria-label="Ajouter un disque"
         className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-6 flex h-16 w-16
                    items-center justify-center rounded-full bg-amber-500 text-3xl
