@@ -13,6 +13,11 @@ export default defineConfig({
       // à « réinstaller » l'app pour recevoir un correctif.
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png'],
+      workbox: {
+        // Par défaut Workbox ignore les .wasm : sans cela le scan cesserait de
+        // fonctionner hors-ligne. Le fichier pèse 1 Mo, sous la limite de 2 Mo.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,wasm}'],
+      },
       manifest: {
         name: 'Catalogue de disques',
         short_name: 'Disques',

@@ -1,22 +1,16 @@
 import { appelerDiscogs } from './client';
 import { prixCAD, versChampsDisque, versPressage, type ChampsDiscogs } from './mapping';
 import type { Pressage, ReleaseDiscogs, ResultatRecherche, StatsMarche } from './types';
+import { variantesCodeBarres } from '../scan/code-barres';
 
 interface ReponseRecherche {
   results?: ResultatRecherche[];
 }
 
-/**
- * Cherche des pressages vinyle. `parCodeBarres` bascule sur la recherche par code-barres,
- * qui ne donne rien sur les disques pressés avant ~1980 — ils n'en portent pas.
- */
-export async function chercher(
-  requete: string,
-  options: { parCodeBarres?: boolean } = {},
-): Promise<Pressage[]> {
-  const champ = options.parCodeBarres === true ? 'barcode' : 'q';
+/** Cherche des pressages vinyle par titre. */
+export async function chercher(requete: string): Promise<Pressage[]> {
   const chemin =
-    `/database/search?${champ}=${encodeURIComponent(requete)}` +
+    `/database/search?q=${encodeURIComponent(requete)}` +
     '&type=release&format=Vinyl&per_page=25';
 
   const reponse = await appelerDiscogs<ReponseRecherche>(chemin);
@@ -35,4 +29,22 @@ export async function obtenirPrix(
   return prixCAD(
     await appelerDiscogs<StatsMarche>(`/marketplace/stats/${releaseId}?curr_abbr=CAD`),
   );
+}
+
+/**
+ * Cherche un disque par son code-barres, en essayant les formes équivalentes du code.
+ *
+ * Pas de filtre `format=Vinyl` ici, contrairement à la recherche texte : un code-barres
+ * identifie déjà un produit précis, et sur-filtrer ferait rater les disques dont Discogs
+ * a mal renseigné le format.
+ */
+export async function chercherParCodeBarres(code: string): Promise<Pressage[]> {
+  for (const variante of variantesCodeBarres(code)) {
+    const chemin = `/database/search?barcode=${encodeURIComponent(variante)}`
+      + '&type=release&per_page=25';
+    const reponse = await appelerDiscogs<ReponseRecherche>(chemin);
+    const pressages = (reponse.results ?? []).map(versPressage);
+    if (pressages.length > 0) return pressages;
+  }
+  return [];
 }
