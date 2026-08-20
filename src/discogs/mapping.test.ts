@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { prixCAD, versChampsDisque, versPressage } from './mapping';
+import { dedupliquerPressages, prixCAD, versChampsDisque, versPressage } from './mapping';
 import type { ReleaseDiscogs, ResultatRecherche, StatsMarche } from './types';
 
 /** Réponse réelle observée le 2026-08-18 pour le pressage canadien de 1976. */
@@ -12,6 +12,7 @@ const HEPTADE_1976: ResultatRecherche = {
   label: ['CBS', 'CBS Inc.', 'Columbia Records Pressing Plant, Don Mills, ON', 'Customatrix'],
   formats: [{ name: 'Vinyl', qty: '2', descriptions: ['LP', 'Album', 'Stereo'] }],
   thumb: '',
+  cover_image: '',
 };
 
 describe('versPressage', () => {
@@ -52,8 +53,22 @@ describe('versPressage', () => {
   });
 
   test('conserve une vignette présente', () => {
-    const avecImage = { ...HEPTADE_1976, thumb: 'https://i.discogs.com/abc.jpg' };
-    expect(versPressage(avecImage).vignette).toBe('https://i.discogs.com/abc.jpg');
+    const avecImage = { ...HEPTADE_1976, thumb: 'https://i.discogs.com/petite.jpg' };
+    expect(versPressage(avecImage).vignette).toBe('https://i.discogs.com/petite.jpg');
+  });
+
+  test('PRÉFÈRE la grande pochette à la vignette basse résolution', () => {
+    const avecDeux = {
+      ...HEPTADE_1976,
+      thumb: 'https://i.discogs.com/h:150/w:150/petite.jpg',
+      cover_image: 'https://i.discogs.com/h:600/w:600/grande.jpg',
+    };
+    expect(versPressage(avecDeux).vignette).toBe('https://i.discogs.com/h:600/w:600/grande.jpg');
+  });
+
+  test('retombe sur la vignette quand la grande pochette manque', () => {
+    const sansGrande = { ...HEPTADE_1976, thumb: 'https://i.discogs.com/petite.jpg', cover_image: '' };
+    expect(versPressage(sansGrande).vignette).toBe('https://i.discogs.com/petite.jpg');
   });
 
   test('survit à un résultat dépouillé de tous ses champs optionnels', () => {
@@ -135,5 +150,53 @@ describe('prixCAD', () => {
 
   test('retourne null si le nombre en vente est absent', () => {
     expect(prixCAD({ lowest_price: null })).toEqual({ valeur: null, nombreEnVente: null });
+  });
+});
+
+describe('dedupliquerPressages', () => {
+  const base = versPressage(HEPTADE_1976);
+
+  test('laisse passer des pressages differents', () => {
+    const deux = [base, { ...base, releaseId: 2, noCatalogue: 'CBS 88234', pays: 'Europe' }];
+    expect(dedupliquerPressages(deux)).toHaveLength(2);
+  });
+
+  test("fusionne deux lignes qui s'afficheraient a l'identique", () => {
+    // Cas reel : Discogs liste separement l'original et son repressage, avec les
+    // memes annee, pays, label, n° de catalogue et format. A l'ecran, rien ne les
+    // distingue : en montrer deux ne cree que du doute.
+    const jumeau = { ...base, releaseId: 999 };
+    expect(dedupliquerPressages([base, jumeau])).toHaveLength(1);
+  });
+
+  test("garde le premier, dont on utilisera l'identifiant", () => {
+    const jumeau = { ...base, releaseId: 999 };
+    expect(dedupliquerPressages([base, jumeau])[0].releaseId).toBe(base.releaseId);
+  });
+
+  test("distingue deux pressages qui ne different que par l'annee", () => {
+    const sansAnnee = { ...base, releaseId: 2, annee: null };
+    expect(dedupliquerPressages([base, sansAnnee])).toHaveLength(2);
+  });
+
+  test('distingue deux pressages qui ne different que par le pays', () => {
+    const ailleurs = { ...base, releaseId: 2, pays: 'Argentina' };
+    expect(dedupliquerPressages([base, ailleurs])).toHaveLength(2);
+  });
+
+  test('fusionne deux lignes ne differant que par la casse du titre', () => {
+    // Cas reel observe : Discogs ecrit « Harmonium - L'Heptade » et
+    // « Harmonium - L'heptade » pour deux entrees par ailleurs identiques.
+    const autreCasse = { ...base, releaseId: 2, titre: "Harmonium - L'heptade" };
+    expect(dedupliquerPressages([base, autreCasse])).toHaveLength(1);
+  });
+
+  test('ignore la vignette, qui ne sert pas a identifier un pressage', () => {
+    const memeAvecAutreImage = { ...base, releaseId: 2, vignette: 'https://autre.jpg' };
+    expect(dedupliquerPressages([base, memeAvecAutreImage])).toHaveLength(1);
+  });
+
+  test("preserve l'ordre et ne touche pas une liste vide", () => {
+    expect(dedupliquerPressages([])).toEqual([]);
   });
 });
