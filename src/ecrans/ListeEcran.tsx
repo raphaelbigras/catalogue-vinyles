@@ -74,7 +74,7 @@ export default function ListeEcran() {
       </header>
 
       {affiches.length === 0 && (
-        <p className="p-8 text-center text-stone-500">
+        <p className="p-8 text-center text-stone-400">
           {disques.length === 0
             ? 'Aucun disque. Touchez + pour ajouter le premier.'
             : 'Aucun résultat pour cette recherche.'}

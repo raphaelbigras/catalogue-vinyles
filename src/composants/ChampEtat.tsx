@@ -19,7 +19,7 @@ export default function ChampEtat({ etiquette, valeur, onChange }: Props) {
           <option key={etat} value={etat}>{etat}</option>
         ))}
       </select>
-      <span className="mt-1 block text-sm text-stone-500">{ETATS_LIBELLES[valeur]}</span>
+      <span className="mt-1 block text-sm text-stone-400">{ETATS_LIBELLES[valeur]}</span>
     </label>
   );
 }
