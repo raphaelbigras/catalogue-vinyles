@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { listerDisques, modifierDisque } from '../db/disques';
 import { obtenirPrix } from '../discogs/api';
@@ -8,6 +8,7 @@ import {
   rafraichirValeurs,
   type ProgressionRafraichissement,
 } from '../discogs/rafraichir';
+import { demanderPersistance } from '../lib/persistance';
 import { effacerJeton, enregistrerJeton, lireJeton } from '../reglages';
 
 export default function ReglagesEcran() {
@@ -18,6 +19,13 @@ export default function ReglagesEcran() {
   const [enCours, setEnCours] = useState(false);
   const [bilan, setBilan] = useState<string | null>(null);
   const controleur = useRef<AbortController | null>(null);
+
+  // iOS decide seul s'il protege le stockage de l'app contre l'effacement
+  // automatique, et le verdict differe entre Safari et l'app installee : on
+  // l'affiche ici plutot que de le supposer. `null` = reponse pas encore connue.
+  const [protege, setProtege] = useState<boolean | null>(null);
+  useEffect(() => { void demanderPersistance().then(setProtege); }, []);
+
 
   function soumettre(evenement: React.FormEvent) {
     evenement.preventDefault();
@@ -155,9 +163,14 @@ export default function ReglagesEcran() {
       )}
 
       <hr className="my-8 border-stone-800" />
+      <p className="text-sm text-stone-400">
+        Stockage protégé contre l'effacement automatique :{' '}
+        {protege === null ? 'vérification…' : protege ? 'oui' : 'non'}
+      </p>
+
       <Link
         to="/sauvegarde"
-        className="block rounded-lg bg-stone-800 p-4 text-center text-base"
+        className="mt-4 block rounded-lg bg-stone-800 p-4 text-center text-base"
       >
         Sauvegarde et exports
       </Link>
