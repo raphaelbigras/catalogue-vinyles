@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
 /*
- * L'utilisatrice voit mal de pres. On agrandit la base typographique de 12,5 %
- * (16 -> 18 px) : comme Tailwind exprime tailles ET espacements en rem, textes,
- * marges et zones tactiles grandissent ensemble, sans toucher aux 54 tailles
- * declarees dans les composants ni casser les proportions.
+ * Passe de lisibilite, deuxieme version.
  *
- * text-base reste ainsi a 18 px, donc au-dessus des 16 px sous lesquels iOS
- * zoome automatiquement en entrant dans un champ.
+ * On avait d'abord agrandi toute la base typographique (16 -> 18 px). Trop :
+ * l'app paraissait zoomee. On revient donc a la base standard de 16 px et on
+ * obtient la lisibilite autrement, sans gonfler l'interface :
+ *
+ *   - plus aucun `text-xs` (12 px) dans les composants : le plus petit texte de
+ *     l'app est desormais `text-sm`, soit 14 px ;
+ *   - les champs de saisie restent en `text-base` (16 px), seuil sous lequel
+ *     iOS zoome automatiquement en entrant dans un champ ;
+ *   - les pochettes Discogs viennent de `cover_image` (600 px) et non du
+ *     `thumb` (150 px), donc nettes meme agrandies.
  */
-html {
-  font-size: 112.5%;
-}
