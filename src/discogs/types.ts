@@ -9,8 +9,10 @@ export interface ResultatRecherche {
   /** Pollué par les usines de pressage et les sociétés de gestion. */
   label?: string[];
   formats?: FormatDiscogs[];
-  /** Vide sans jeton d'authentification. */
+  /** Vignette 150x150 en qualite 40. Vide sans jeton d'authentification. */
   thumb?: string;
+  /** Pochette 600x600 en qualite 90. Vide sans jeton d'authentification. */
+  cover_image?: string;
 }
 
 export interface FormatDiscogs {

@@ -13,7 +13,7 @@ export default function CarteDisque({ disque }: { disque: Disque }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{disque.album}</span>
         <span className="block truncate text-sm text-stone-400">{disque.artiste}</span>
-        <span className="block text-xs text-stone-500">
+        <span className="block text-sm text-stone-500">
           {[disque.annee, disque.noCatalogue, `${disque.etatDisque}/${disque.etatPochette}`]
             .filter(Boolean)
             .join(' · ')}
@@ -25,7 +25,7 @@ export default function CarteDisque({ disque }: { disque: Disque }) {
           ? <span className="text-stone-600">—</span>
           : formaterCAD(disque.valeurEstimee)}
         {disque.quantite > 1 && (
-          <span className="block text-xs text-stone-500">× {disque.quantite}</span>
+          <span className="block text-sm text-stone-500">× {disque.quantite}</span>
         )}
       </span>
     </Link>

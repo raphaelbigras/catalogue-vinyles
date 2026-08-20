@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+/*
+ * L'utilisatrice voit mal de pres. On agrandit la base typographique de 12,5 %
+ * (16 -> 18 px) : comme Tailwind exprime tailles ET espacements en rem, textes,
+ * marges et zones tactiles grandissent ensemble, sans toucher aux 54 tailles
+ * declarees dans les composants ni casser les proportions.
+ *
+ * text-base reste ainsi a 18 px, donc au-dessus des 16 px sous lesquels iOS
+ * zoome automatiquement en entrant dans un champ.
+ */
+html {
+  font-size: 112.5%;
+}

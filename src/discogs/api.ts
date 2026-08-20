@@ -1,5 +1,7 @@
 import { appelerDiscogs } from './client';
-import { prixCAD, versChampsDisque, versPressage, type ChampsDiscogs } from './mapping';
+import {
+  dedupliquerPressages, prixCAD, versChampsDisque, versPressage, type ChampsDiscogs,
+} from './mapping';
 import type { Pressage, ReleaseDiscogs, ResultatRecherche, StatsMarche } from './types';
 import { variantesCodeBarres } from '../scan/code-barres';
 
@@ -14,7 +16,7 @@ export async function chercher(requete: string): Promise<Pressage[]> {
     '&type=release&format=Vinyl&per_page=25';
 
   const reponse = await appelerDiscogs<ReponseRecherche>(chemin);
-  return (reponse.results ?? []).map(versPressage);
+  return dedupliquerPressages((reponse.results ?? []).map(versPressage));
 }
 
 /** Récupère artiste et album séparés, et un label non pollué. */
@@ -43,7 +45,7 @@ export async function chercherParCodeBarres(code: string): Promise<Pressage[]> {
     const chemin = `/database/search?barcode=${encodeURIComponent(variante)}`
       + '&type=release&per_page=25';
     const reponse = await appelerDiscogs<ReponseRecherche>(chemin);
-    const pressages = (reponse.results ?? []).map(versPressage);
+    const pressages = dedupliquerPressages((reponse.results ?? []).map(versPressage));
     if (pressages.length > 0) return pressages;
   }
   return [];

@@ -13,7 +13,7 @@ export default function CartePressage({ pressage, onChoisir }: Props) {
       className="flex w-full items-center gap-3 border-b border-stone-800 p-4 text-left active:bg-stone-800"
     >
       {pressage.vignette !== null && (
-        <img src={pressage.vignette} alt="" className="h-14 w-14 shrink-0 rounded object-cover" />
+        <img src={pressage.vignette} alt="" className="h-18 w-18 shrink-0 rounded object-cover" />
       )}
 
       <span className="min-w-0 flex-1">

@@ -9,16 +9,23 @@ import {
   derniereSauvegarde, marquerSauvegarde, modificationsEnAttente,
 } from '../lib/suivi-sauvegarde';
 
+/** Photo du suivi de sauvegarde, lu depuis localStorage. */
+function lireSuivi() {
+  return { enAttente: modificationsEnAttente(), derniere: derniereSauvegarde() };
+}
+
 export default function SauvegardeEcran() {
   const [message, setMessage] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
-  // Force un rendu apres une sauvegarde, le compteur vivant hors de l'etat React.
-  const [rafraichissement, setRafraichissement] = useState(0);
   const champFichier = useRef<HTMLInputElement>(null);
 
-  const enAttente = modificationsEnAttente();
-  const derniere = derniereSauvegarde();
-  void rafraichissement;
+  // Le suivi vit dans localStorage, hors de React : on en prend une photo dans l'etat
+  // et on la rafraichit apres chaque sauvegarde ou restauration.
+  const [suivi, setSuivi] = useState(lireSuivi);
+
+  function rafraichirSuivi() {
+    setSuivi(lireSuivi());
+  }
 
   async function sauvegarder() {
     setErreur(null);
@@ -30,7 +37,7 @@ export default function SauvegardeEcran() {
     );
     if (enregistre) {
       marquerSauvegarde();
-      setRafraichissement((n) => n + 1);
+      rafraichirSuivi();
       setMessage(`${disques.length} disque${disques.length > 1 ? 's' : ''} sauvegardé${disques.length > 1 ? 's' : ''}.`);
     }
   }
@@ -62,7 +69,7 @@ export default function SauvegardeEcran() {
       await db.disques.clear();
       await db.disques.bulkAdd(disques);
       marquerSauvegarde();
-      setRafraichissement((n) => n + 1);
+      rafraichirSuivi();
       setMessage(`${disques.length} disque${disques.length > 1 ? 's' : ''} restauré${disques.length > 1 ? 's' : ''}.`);
     } catch (e) {
       setErreur(e instanceof ErreurSauvegarde ? e.message : 'Ce fichier n\'a pas pu être lu.');
@@ -84,10 +91,11 @@ export default function SauvegardeEcran() {
       </p>
 
       <p className="mt-4 text-sm text-stone-400">
-        {derniere === null
+        {suivi.derniere === null
           ? 'Aucune sauvegarde effectuée pour l\'instant.'
-          : `Dernière sauvegarde : ${derniere.toLocaleDateString('fr-CA')}.`}
-        {enAttente > 0 && ` ${enAttente} modification${enAttente > 1 ? 's' : ''} depuis.`}
+          : `Dernière sauvegarde : ${suivi.derniere.toLocaleDateString('fr-CA')}.`}
+        {suivi.enAttente > 0
+          && ` ${suivi.enAttente} modification${suivi.enAttente > 1 ? 's' : ''} depuis.`}
       </p>
 
       <button
