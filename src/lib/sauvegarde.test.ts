@@ -72,3 +72,39 @@ describe('refus des fichiers invalides', () => {
     expect(() => deserialiser('{"version":99,"disques":[]}')).toThrow(/version/i);
   });
 });
+
+describe('compatibilité des anciennes sauvegardes', () => {
+  /** Une sauvegarde produite avant l'ajout des pochettes : les champs manquent. */
+  const ANCIENNE = JSON.stringify({
+    version: 1,
+    exporteLe: '2026-08-18T12:00:00.000Z',
+    disques: [{
+      id: 1, artiste: 'Harmonium', album: "L'Heptade", annee: 1976, label: 'CBS',
+      noCatalogue: 'PGF 90348', pays: 'Canada', format: '2xLP',
+      etatDisque: 'VG+', etatPochette: 'VG', pochetteGenerique: false, quantite: 1,
+      valeurEstimee: 45.5, valeurSource: 'discogs', valeurMaj: '2026-08-18T12:00:00.000Z',
+      discogsReleaseId: 1887068, discogsNumForSale: 35, notes: '',
+      dateAjout: '2026-08-18T12:00:00.000Z', dateModif: '2026-08-18T12:00:00.000Z',
+    }],
+  });
+
+  test('se restaure sans erreur malgré les champs de pochette absents', () => {
+    expect(deserialiser(ANCIENNE)).toHaveLength(1);
+  });
+
+  test('DONNE null AUX POCHETTES ABSENTES plutôt que de laisser undefined', () => {
+    // `undefined` traverserait Dexie puis atteindrait le composant Pochette, dont
+    // la comparaison `url === null` serait fausse : il tenterait alors d'afficher
+    // une image sans adresse.
+    const [disque] = deserialiser(ANCIENNE);
+    expect(disque.pochettePetite).toBeNull();
+    expect(disque.pochetteGrande).toBeNull();
+  });
+
+  test('ne touche pas aux pochettes présentes', () => {
+    const avec = JSON.parse(ANCIENNE);
+    avec.disques[0].pochettePetite = 'https://i.discogs.com/petite.jpg';
+    const [disque] = deserialiser(JSON.stringify(avec));
+    expect(disque.pochettePetite).toBe('https://i.discogs.com/petite.jpg');
+  });
+});

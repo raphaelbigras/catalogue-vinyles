@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useLiveQuery } from 'dexie-react-hooks';
+import Pochette from '../composants/Pochette';
 import { modifierDisque, obtenirDisque, supprimerDisque } from '../db/disques';
 import { ETATS_LIBELLES } from '../db/schema';
 import { obtenirPrix } from '../discogs/api';
@@ -74,9 +75,14 @@ export default function FicheEcran() {
     <div className="p-4 pt-[calc(1rem+env(safe-area-inset-top))]">
       <Link to="/" className="text-sm text-amber-500">← Retour à la collection</Link>
 
-      <h1 className="mt-3 text-xl font-semibold">{disque.album}</h1>
-      <p className="text-stone-400">{disque.artiste}</p>
-      <p className="mt-1 text-sm text-stone-500">Inventaire n° {disque.id}</p>
+      <div className="mt-3 flex items-start gap-4">
+        <Pochette url={disque.pochetteGrande ?? disque.pochettePetite} taille="h-28 w-28" />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold">{disque.album}</h1>
+          <p className="text-stone-400">{disque.artiste}</p>
+          <p className="mt-1 text-sm text-stone-500">Inventaire n° {disque.id}</p>
+        </div>
+      </div>
 
       <dl className="mt-6 divide-y divide-stone-800">
         {lignes.map(([etiquette, valeur]) => (

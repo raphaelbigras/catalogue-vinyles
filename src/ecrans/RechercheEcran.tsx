@@ -46,6 +46,10 @@ export default function RechercheEcran() {
           ...champs,
           valeurEstimee: prix.valeur,
           discogsNumForSale: prix.nombreEnVente,
+          // La fiche `/releases/` ne porte pas d'image exploitable : les URL viennent
+          // du resultat de recherche, deja affiche a l'ecran.
+          pochettePetite: pressage.pochettePetite,
+          pochetteGrande: pressage.pochetteGrande,
         },
       });
     } catch (e) {

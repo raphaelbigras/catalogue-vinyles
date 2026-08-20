@@ -47,5 +47,8 @@ export interface Pressage {
   noCatalogue: string;
   label: string;
   format: string;
-  vignette: string | null;
+  /** 150x150 : assez pour une ligne de liste, 2,3 Ko. */
+  pochettePetite: string | null;
+  /** 600x600 : pour un affichage en grand, 69 Ko. */
+  pochetteGrande: string | null;
 }

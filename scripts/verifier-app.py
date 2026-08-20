@@ -93,9 +93,20 @@ with sync_playwright() as p:
     # 4. Le disque apparaît dans la liste avec son numéro d'inventaire
     page.click("text=Retour à la collection")
     page.wait_for_selector("li")
-    numeros = page.locator("li span.w-10").all_inner_texts()
+    # Selection par structure et non par classe Tailwind : « span.w-10 » avait casse
+    # cette verification le jour ou la largeur de la colonne a change, sans que
+    # rien ne soit reellement en panne.
+    numeros = page.locator("li a > span:first-child").all_inner_texts()
     verifier(4, "Le disque apparaît dans la liste avec son n° d'inventaire",
              numeros == ["#1"], f"(numéros affichés : {numeros})")
+
+    # 4.2. Pochette : sans jeton Discogs il n'y a pas d'image, mais la place doit
+    # etre tenue quand meme, sinon la liste sursaute pendant le defilement.
+    vignette = page.locator("li a > :nth-child(2)").first
+    boite = vignette.bounding_box()
+    carree = boite is not None and boite["width"] == boite["height"] > 0
+    verifier("4.2", "La pochette absente garde la place d'une pochette presente",
+             carree, f"(boite : {boite and (round(boite['width']), round(boite['height']))})")
 
     # 5. La valeur totale
     total = page.locator("p.text-amber-500")

@@ -48,27 +48,31 @@ describe('versPressage', () => {
     expect(versPressage(inconnu).format).toBe('Vinyl');
   });
 
-  test('convertit une vignette vide en null plutôt qu\'en chaîne vide', () => {
-    expect(versPressage(HEPTADE_1976).vignette).toBeNull();
+  test("convertit les chaines vides de Discogs en null", () => {
+    const p = versPressage(HEPTADE_1976);
+    expect(p.pochettePetite).toBeNull();
+    expect(p.pochetteGrande).toBeNull();
   });
 
-  test('conserve une vignette présente', () => {
-    const avecImage = { ...HEPTADE_1976, thumb: 'https://i.discogs.com/petite.jpg' };
-    expect(versPressage(avecImage).vignette).toBe('https://i.discogs.com/petite.jpg');
-  });
-
-  test('PRÉFÈRE la grande pochette à la vignette basse résolution', () => {
+  test("GARDE LES DEUX TAILLES separement, la petite pesant 30 fois moins", () => {
+    // Mesure le 2026-08-19 : thumb 2,3 Ko, cover_image 69 Ko. Sur 200 lignes de
+    // liste, tout afficher en grand couterait 14 Mo au lieu de 460 Ko.
     const avecDeux = {
       ...HEPTADE_1976,
-      thumb: 'https://i.discogs.com/h:150/w:150/petite.jpg',
-      cover_image: 'https://i.discogs.com/h:600/w:600/grande.jpg',
+      thumb: "https://i.discogs.com/h:150/w:150/petite.jpg",
+      cover_image: "https://i.discogs.com/h:600/w:600/grande.jpg",
     };
-    expect(versPressage(avecDeux).vignette).toBe('https://i.discogs.com/h:600/w:600/grande.jpg');
+    const p = versPressage(avecDeux);
+    expect(p.pochettePetite).toBe("https://i.discogs.com/h:150/w:150/petite.jpg");
+    expect(p.pochetteGrande).toBe("https://i.discogs.com/h:600/w:600/grande.jpg");
   });
 
-  test('retombe sur la vignette quand la grande pochette manque', () => {
-    const sansGrande = { ...HEPTADE_1976, thumb: 'https://i.discogs.com/petite.jpg', cover_image: '' };
-    expect(versPressage(sansGrande).vignette).toBe('https://i.discogs.com/petite.jpg');
+  test("NE FAIT PAS passer la petite pochette pour la grande quand celle-ci manque", () => {
+    // Sinon la fiche afficherait une image 150 px dans un cadre prevu pour 600.
+    const sansGrande = { ...HEPTADE_1976, thumb: "https://i.discogs.com/petite.jpg", cover_image: "" };
+    const p = versPressage(sansGrande);
+    expect(p.pochettePetite).toBe("https://i.discogs.com/petite.jpg");
+    expect(p.pochetteGrande).toBeNull();
   });
 
   test('survit à un résultat dépouillé de tous ses champs optionnels', () => {
@@ -82,7 +86,8 @@ describe('versPressage', () => {
       noCatalogue: '',
       label: '',
       format: '',
-      vignette: null,
+      pochettePetite: null,
+      pochetteGrande: null,
     });
   });
 });
@@ -191,8 +196,8 @@ describe('dedupliquerPressages', () => {
     expect(dedupliquerPressages([base, autreCasse])).toHaveLength(1);
   });
 
-  test('ignore la vignette, qui ne sert pas a identifier un pressage', () => {
-    const memeAvecAutreImage = { ...base, releaseId: 2, vignette: 'https://autre.jpg' };
+  test("ignore les pochettes, qui ne servent pas a identifier un pressage", () => {
+    const memeAvecAutreImage = { ...base, releaseId: 2, pochetteGrande: "https://autre.jpg" };
     expect(dedupliquerPressages([base, memeAvecAutreImage])).toHaveLength(1);
   });
 
