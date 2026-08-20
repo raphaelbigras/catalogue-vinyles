@@ -44,6 +44,11 @@
     <p id="partage">…</p>
   </div>
 
+  <div class="test">
+    <h2>5. Stockage protégé</h2>
+    <p id="persistance">…</p>
+  </div>
+
 <script>
 /** Écrit un verdict sans jamais interpréter le texte comme du HTML. */
 function verdict(id, reussi, texte) {
@@ -104,6 +109,27 @@ document.getElementById('btn-partage').onclick = async () => {
       : verdict('partage', false, 'échec : ' + e.name);
   }
 };
+
+// 5. Stockage protégé : iOS peut effacer les données d'un site pour récupérer de
+// l'espace disque, sauf si le stockage est marqué « persistant ». Safari décide
+// seul, sans poser de question : ce test rapporte sa décision réelle.
+(async () => {
+  if (!navigator.storage || !navigator.storage.persist) {
+    verdict('persistance', false, "API absente — ce navigateur ne sait pas protéger le stockage");
+    return;
+  }
+  try {
+    const deja = await navigator.storage.persisted();
+    const accorde = deja || await navigator.storage.persist();
+    verdict('persistance', accorde,
+      accorde
+        ? (deja ? "déjà accordé — iOS n'effacera pas la collection pour faire de la place"
+                : "accordé — iOS n'effacera pas la collection pour faire de la place")
+        : "refusé par le navigateur — les données restent effaçables sous pression disque");
+  } catch (e) {
+    verdict('persistance', false, "échec : " + e.name);
+  }
+})();
 </script>
 </body>
 </html>
