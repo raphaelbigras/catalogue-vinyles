@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router';
+import { Navigate, Route, Routes } from 'react-router';
 import ListeEcran from './ecrans/ListeEcran';
 import SauvegardeEcran from './ecrans/SauvegardeEcran';
 import ScanEcran from './ecrans/ScanEcran';
@@ -21,6 +21,9 @@ export default function App() {
         <Route path="/ajouter-choix" element={<ChoixAjoutEcran />} />
         <Route path="/chercher" element={<RechercheEcran />} />
         <Route path="/scanner" element={<ScanEcran />} />
+        {/* Une adresse inconnue affichait une page blanche : sans barre d'adresse
+            ni bouton retour, l'application etait alors sans issue. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );

@@ -8,12 +8,17 @@ import { obtenirPrix } from '../discogs/api';
 import { ErreurDiscogs } from '../discogs/client';
 import { versTexteAnnonce } from '../lib/csv';
 import { copierTexte } from '../lib/partage';
+import { numeroDisque } from '../lib/route';
 import { formaterCAD } from '../lib/valeur';
 
 export default function FicheEcran() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const disque = useLiveQuery(async () => (await obtenirDisque(Number(id))) ?? null, [id]);
+  const numero = numeroDisque(id);
+  const disque = useLiveQuery(
+    async () => (numero === null ? null : (await obtenirDisque(numero)) ?? null),
+    [numero],
+  );
   const [messagePrix, setMessagePrix] = useState<string | null>(null);
   const [copie, setCopie] = useState(false);
 
@@ -38,7 +43,15 @@ export default function FicheEcran() {
   }
 
   if (disque === undefined) return <p className="p-8 text-stone-400">Chargement…</p>;
-  if (disque === null) return <p className="p-8 text-stone-400">Disque introuvable.</p>;
+  if (disque === null) {
+    // Sortie de secours : sans ce lien l'ecran etait sans issue.
+    return (
+      <div className="p-8 pt-[calc(2rem+env(safe-area-inset-top))]">
+        <p className="text-stone-400">Ce disque n'existe plus.</p>
+        <Link to="/" className="mt-4 block text-amber-500">← Retour à la collection</Link>
+      </div>
+    );
+  }
 
   async function effacer() {
     if (!confirm(`Supprimer définitivement « ${disque!.album} » ?`)) return;

@@ -281,6 +281,21 @@ with sync_playwright() as p:
              len(requetes_cdn) == 0, f"({requetes_cdn})" if requetes_cdn else "")
     page.screenshot(path=f"{SORTIE}/11-scan.png", full_page=True)
 
+    # 20. Aucune adresse ne doit laisser l'utilisatrice devant une page blanche :
+    # ajoutee a l'ecran d'accueil, l'application n'a ni barre d'adresse ni bouton
+    # retour, et une page sans lien est une impasse dont on ne sort qu'en la tuant.
+    impasses = []
+    for url in ["/nimporte-quoi", "/disque/abc", "/disque/999",
+                "/disque/999/modifier", "/disque/abc/modifier"]:
+        page.goto(BASE + url)
+        page.wait_for_timeout(700)
+        sorties = page.eval_on_selector_all(
+            "a", "els => els.map(e => e.getAttribute('href')).filter(h => h && h !== '#')")
+        if not sorties:
+            impasses.append(url)
+    verifier(20, "Aucune adresse ne mene a une page sans issue",
+             len(impasses) == 0, f"(sans issue : {impasses})" if impasses else "")
+
     verifier(11, "Aucune erreur JavaScript dans la console",
              len(erreurs_console) == 0, f"({erreurs_console})" if erreurs_console else "")
 
