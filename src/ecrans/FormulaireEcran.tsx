@@ -58,7 +58,7 @@ export default function FormulaireEcran() {
     }
   }
 
-  if (!charge) return <p className="p-8 text-stone-500">Chargement…</p>;
+  if (!charge) return <p className="p-8 text-stone-400">Chargement…</p>;
 
   return (
     <form onSubmit={enregistrer} className="space-y-4 p-4 pt-[calc(1rem+env(safe-area-inset-top))]">

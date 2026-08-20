@@ -79,14 +79,14 @@ export default function RechercheEcran() {
         </button>
       </form>
 
-      {enCours && <p className="mt-8 text-center text-stone-500">Recherche en cours…</p>}
+      {enCours && <p className="mt-8 text-center text-stone-400">Recherche en cours…</p>}
 
       {erreur !== null && (
         <p className="mt-6 rounded-lg border border-red-900 p-4 text-sm text-red-400">{erreur}</p>
       )}
 
       {!enCours && pressages !== null && pressages.length === 0 && (
-        <div className="mt-8 text-center text-stone-500">
+        <div className="mt-8 text-center text-stone-400">
           <p>Aucun disque trouvé.</p>
           <p className="mt-2 text-sm">
             Essayez avec moins de mots, ou{' '}

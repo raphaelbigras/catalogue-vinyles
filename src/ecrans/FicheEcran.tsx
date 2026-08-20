@@ -37,8 +37,8 @@ export default function FicheEcran() {
     }
   }
 
-  if (disque === undefined) return <p className="p-8 text-stone-500">Chargement…</p>;
-  if (disque === null) return <p className="p-8 text-stone-500">Disque introuvable.</p>;
+  if (disque === undefined) return <p className="p-8 text-stone-400">Chargement…</p>;
+  if (disque === null) return <p className="p-8 text-stone-400">Disque introuvable.</p>;
 
   async function effacer() {
     if (!confirm(`Supprimer définitivement « ${disque!.album} » ?`)) return;
@@ -80,7 +80,7 @@ export default function FicheEcran() {
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold">{disque.album}</h1>
           <p className="text-stone-400">{disque.artiste}</p>
-          <p className="mt-1 text-sm text-stone-500">Inventaire n° {disque.id}</p>
+          <p className="mt-1 text-sm text-stone-400">Inventaire n° {disque.id}</p>
         </div>
       </div>
 

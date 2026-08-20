@@ -19,6 +19,9 @@ interface Props {
  * une eventuelle disparition chez Discogs, le chargement echoue. Dans tous ces
  * cas la ligne doit garder exactement la meme taille, sinon la liste sursaute
  * pendant le defilement.
+ *
+ * Le symbole reste discret sans etre invisible : a stone-600 son contraste
+ * tombait a 1,99:1, illisible pour une vue fatiguee.
  */
 export default function Pochette({ url, taille }: Props) {
   const [echec, setEchec] = useState(false);
@@ -27,7 +30,7 @@ export default function Pochette({ url, taille }: Props) {
     return (
       <span
         aria-hidden="true"
-        className={`${taille} grid shrink-0 place-items-center rounded bg-stone-800 text-stone-600`}
+        className={`${taille} grid shrink-0 place-items-center rounded bg-stone-800 text-stone-500`}
       >
         ♪
       </span>
