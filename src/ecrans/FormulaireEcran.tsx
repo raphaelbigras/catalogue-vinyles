@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router';
 import ChampEtat from '../composants/ChampEtat';
 import { ajouterDisque, modifierDisque, obtenirDisque } from '../db/disques';
 import { DISQUE_VIDE, type NouveauDisque } from '../db/schema';
+import { numeroDisque } from '../lib/route';
 
 /** Champs texte simples, déclarés en données pour ne pas répéter 6 fois le même JSX. */
 const CHAMPS_TEXTE = [
@@ -37,11 +38,15 @@ export default function FormulaireEcran() {
 
   useEffect(() => {
     if (!modeEdition) return;
-    obtenirDisque(Number(id)).then((existant) => {
-      if (existant) setDisque(existant);
-      setCharge(true);
+    const numero = numeroDisque(id);
+    // Modifier un disque inexistant ouvrait un formulaire vide dont l'enregistrement
+    // ne faisait rien : mieux vaut revenir a la collection.
+    if (numero === null) { navigate('/', { replace: true }); return; }
+    obtenirDisque(numero).then((existant) => {
+      if (existant === undefined) navigate('/', { replace: true });
+      else { setDisque(existant); setCharge(true); }
     });
-  }, [id, modeEdition]);
+  }, [id, modeEdition, navigate]);
 
   function majChamp<C extends keyof NouveauDisque>(cle: C, valeur: NouveauDisque[C]) {
     setDisque((precedent) => ({ ...precedent, [cle]: valeur }));
