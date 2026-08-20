@@ -31,6 +31,15 @@ export interface Disque {
   valeurMaj: Date | null;
   discogsReleaseId: number | null;
   discogsNumForSale: number | null;
+  /**
+   * Adresses des pochettes chez Discogs, pas les images elles-memes : i.discogs.com
+   * ne renvoie aucun en-tete CORS, donc le navigateur peut les afficher mais jamais
+   * les telecharger pour les stocker. Elles restent donc soumises au reseau — mais
+   * elles sont servies avec un cache d'un an, et l'URL ne contient aucune date
+   * d'expiration.
+   */
+  pochettePetite: string | null;
+  pochetteGrande: string | null;
   notes: string;
   dateAjout: Date;
   dateModif: Date;
@@ -57,5 +66,7 @@ export const DISQUE_VIDE: NouveauDisque = {
   valeurMaj: null,
   discogsReleaseId: null,
   discogsNumForSale: null,
+  pochettePetite: null,
+  pochetteGrande: null,
   notes: '',
 };

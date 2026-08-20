@@ -20,9 +20,9 @@ export function formaterSupport(formats: FormatDiscogs[] | undefined): string {
   return quantite > 1 ? `${quantite}x${support}` : support;
 }
 
-/** Retourne la premiere chaine reellement remplie, ou null. */
-function premiereNonVide(valeurs: (string | undefined)[]): string | null {
-  return valeurs.find((v) => v !== undefined && v !== '') ?? null;
+/** Discogs renvoie une chaine vide, et non `undefined`, quand il n'a pas d'image. */
+function nonVide(valeur: string | undefined): string | null {
+  return valeur === undefined || valeur === '' ? null : valeur;
 }
 
 export function versPressage(resultat: ResultatRecherche): Pressage {
@@ -36,10 +36,11 @@ export function versPressage(resultat: ResultatRecherche): Pressage {
     // de gestion. Le premier est le bon dans les réponses observées.
     label: resultat.label?.[0] ?? '',
     format: formaterSupport(resultat.formats),
-    // On prefere `cover_image` (600x600, qualite 90) a `thumb` (150x150, qualite 40) :
-    // l'utilisatrice voit mal de pres, et 150 px sont deja insuffisants sur un ecran
-    // Retina meme a la petite taille d'origine.
-    vignette: premiereNonVide([resultat.cover_image, resultat.thumb]),
+    // Les deux tailles sont conservees : afficher partout la grande couterait
+    // 69 Ko par ligne de liste (contre 2,3 Ko), afficher partout la petite
+    // donnerait une image floue des qu'on la montre en grand.
+    pochettePetite: nonVide(resultat.thumb),
+    pochetteGrande: nonVide(resultat.cover_image),
   };
 }
 

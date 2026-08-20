@@ -5,6 +5,13 @@ const VERSION = 1;
 /** Champs à reconvertir en `Date` : JSON ne connaît que les chaînes. */
 const CHAMPS_DATE = ['dateAjout', 'dateModif', 'valeurMaj'] as const;
 
+/**
+ * Champs texte ajoutés après coup : une sauvegarde plus ancienne ne les contient
+ * pas, et un champ absent vaut `undefined`, ce que le reste du code ne connaît
+ * pas — il attend `null`.
+ */
+const CHAMPS_TEXTE_OPTIONNELS = ['pochettePetite', 'pochetteGrande'] as const;
+
 export class ErreurSauvegarde extends Error {}
 
 interface Fichier {
@@ -54,6 +61,9 @@ export function deserialiser(texte: string): Disque[] {
     for (const champ of CHAMPS_DATE) {
       const valeur = disque[champ];
       disque[champ] = typeof valeur === 'string' ? new Date(valeur) : null;
+    }
+    for (const champ of CHAMPS_TEXTE_OPTIONNELS) {
+      disque[champ] = typeof disque[champ] === 'string' ? disque[champ] : null;
     }
     return disque as unknown as Disque;
   });
