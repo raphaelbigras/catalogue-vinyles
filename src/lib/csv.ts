@@ -8,7 +8,7 @@ const SEPARATEUR = ';';
 const COLONNES = [
   'N° inventaire', 'Artiste', 'Album', 'Année', 'Label', 'N° catalogue', 'Pays',
   'Format', 'État disque', 'État pochette', 'Pochette générique', 'Quantité',
-  'Valeur estimée (CAD)', 'Notes',
+  'Valeur estimée (CAD)', 'Source de la valeur', 'Date de la valeur', 'Notes',
 ] as const;
 
 /** Met un champ entre guillemets s'il contient un séparateur, un guillemet ou un saut de ligne. */
@@ -22,6 +22,23 @@ function montant(valeur: number | null): string {
   return valeur === null ? '' : valeur.toFixed(2).replace('.', ',');
 }
 
+/**
+ * Date au format AAAA-MM-JJ, qu'Excel trie correctement.
+ *
+ * `toLocaleDateString('fr-CA')` donne exactement cette forme, en heure locale.
+ * Passer par `toISOString()` aurait donne la date UTC, decalee d'un jour pour
+ * toute saisie faite le soir au Quebec.
+ */
+function jour(date: Date | null): string {
+  return date === null ? '' : date.toLocaleDateString('fr-CA');
+}
+
+/** D'ou vient l'estimation. Vide s'il n'y a pas de montant a qualifier. */
+function source(disque: Disque): string {
+  if (disque.valeurEstimee === null) return '';
+  return disque.valeurSource === 'discogs' ? 'Discogs' : 'Saisie manuelle';
+}
+
 export function versCSV(disques: readonly Disque[]): string {
   const lignes = [COLONNES.join(SEPARATEUR)];
 
@@ -30,7 +47,8 @@ export function versCSV(disques: readonly Disque[]): string {
       String(d.id), d.artiste, d.album, d.annee === null ? '' : String(d.annee),
       d.label, d.noCatalogue, d.pays, d.format, d.etatDisque, d.etatPochette,
       d.pochetteGenerique ? 'Oui' : 'Non', String(d.quantite),
-      montant(d.valeurEstimee), d.notes,
+      montant(d.valeurEstimee), source(d),
+      d.valeurEstimee === null ? '' : jour(d.valeurMaj), d.notes,
     ].map(echapper).join(SEPARATEUR));
   }
 

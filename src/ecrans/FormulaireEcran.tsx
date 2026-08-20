@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import ChampEtat from '../composants/ChampEtat';
-import { ajouterDisque, modifierDisque, obtenirDisque } from '../db/disques';
+import { ajouterDisque, listerDisques, modifierDisque, obtenirDisque } from '../db/disques';
 import { DISQUE_VIDE, type NouveauDisque } from '../db/schema';
+import { messageDoublon, trouverDoublon } from '../lib/doublon';
 import { numeroDisque } from '../lib/route';
 
 /** Champs texte simples, déclarés en données pour ne pas répéter 6 fois le même JSX. */
@@ -58,6 +59,15 @@ export default function FormulaireEcran() {
       await modifierDisque(Number(id), disque);
       navigate(`/disque/${id}`);
     } else {
+      // Verifie juste avant d'ecrire, et non a l'ouverture : la collection a pu
+      // changer entre-temps.
+      const doublon = trouverDoublon(await listerDisques(), disque);
+      if (doublon !== null && !confirm(messageDoublon(doublon))) {
+        // Annuler veut dire « je n'en veux pas un deuxieme ». On l'amene au disque
+        // existant, ou elle peut augmenter la quantite comme le message le conseille.
+        navigate(`/disque/${doublon.disque.id}`);
+        return;
+      }
       const nouvelId = await ajouterDisque(disque);
       navigate(`/disque/${nouvelId}`);
     }
