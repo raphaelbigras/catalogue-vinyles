@@ -6,6 +6,18 @@ function disque(champs: Partial<Disque>): Disque {
   return { ...DISQUE_VIDE, id: 1, dateAjout: new Date(), dateModif: new Date(), ...champs };
 }
 
+/**
+ * Lit une colonne par son nom d'en-tete. Un acces par position (« l'avant-derniere
+ * colonne ») cassait des qu'on en inserait une nouvelle, sans que rien ne soit
+ * reellement en panne.
+ */
+function colonne(csv: string, entete: string, ligne = 1): string {
+  const lignes = csv.replace(BOM_UTF8, '').trimEnd().split('\r\n');
+  const index = lignes[0].split(';').indexOf(entete);
+  expect(index, `colonne « ${entete} » absente`).toBeGreaterThanOrEqual(0);
+  return lignes[ligne].split(';')[index];
+}
+
 const HEPTADE = disque({
   id: 1, artiste: 'Harmonium', album: "L'Heptade", annee: 1976, label: 'CBS',
   noCatalogue: 'PGF 90348', pays: 'Canada', format: '2xLP', etatDisque: 'VG+',
@@ -48,8 +60,7 @@ describe('versCSV', () => {
   });
 
   test('laisse la valeur vide plutôt que d\'écrire zéro quand elle est inconnue', () => {
-    const lignes = versCSV([disque({ valeurEstimee: null })]).replace(BOM_UTF8, '').split('\r\n');
-    expect(lignes[1].split(';').at(-2)).toBe('');
+    expect(colonne(versCSV([disque({ valeurEstimee: null })]), 'Valeur estimée (CAD)')).toBe('');
   });
 
   test('produit seulement l\'en-tête pour une collection vide', () => {
@@ -81,5 +92,36 @@ describe('versTexteAnnonce', () => {
   test('sépare les disques par des sauts de ligne', () => {
     const texte = versTexteAnnonce([disque({ artiste: 'A', album: 'B' }), disque({ artiste: 'C', album: 'D' })]);
     expect(texte.split('\n')).toHaveLength(2);
+  });
+});
+
+describe('provenance de la valeur dans le CSV', () => {
+  test('indique que la valeur vient de Discogs, et sa date', () => {
+    const auto = disque({
+      valeurEstimee: 45.5, valeurSource: 'discogs', valeurMaj: new Date(2026, 7, 19, 21, 30),
+    });
+    const csv = versCSV([auto]);
+    expect(colonne(csv, 'Source de la valeur')).toBe('Discogs');
+    expect(colonne(csv, 'Date de la valeur')).toBe('2026-08-19');
+  });
+
+  test("distingue une valeur saisie a la main d'une valeur Discogs", () => {
+    const saisi = disque({ valeurEstimee: 60, valeurSource: 'manuelle', valeurMaj: new Date() });
+    expect(colonne(versCSV([saisi]), 'Source de la valeur')).toBe('Saisie manuelle');
+  });
+
+  test("N'ANNONCE AUCUNE SOURCE quand il n'y a pas de montant a qualifier", () => {
+    // Sinon le tableur afficherait « Discogs » en face d'une case de valeur vide.
+    const sans = disque({ valeurEstimee: null, valeurSource: 'discogs', valeurMaj: new Date() });
+    const csv = versCSV([sans]);
+    expect(colonne(csv, 'Source de la valeur')).toBe('');
+    expect(colonne(csv, 'Date de la valeur')).toBe('');
+  });
+
+  test('ECRIT LA DATE LOCALE et non la date UTC', () => {
+    // Le 19 aout a 21 h au Quebec, c'est deja le 20 en temps universel : passer par
+    // toISOString() aurait vieilli l'estimation d'un jour.
+    const tard = disque({ valeurEstimee: 10, valeurMaj: new Date(2026, 7, 19, 21, 0) });
+    expect(colonne(versCSV([tard]), 'Date de la valeur')).toBe('2026-08-19');
   });
 });

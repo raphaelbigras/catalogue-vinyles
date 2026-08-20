@@ -168,7 +168,11 @@ with sync_playwright() as p:
 
     # 9. Supprimer demande confirmation et ramène à la liste
     dialogues = []
-    page.on("dialog", lambda d: (dialogues.append(d.message), d.accept()))
+    # Un seul gestionnaire pour toute la session, dont la reponse est pilotable :
+    # certaines verifications ont besoin de refuser, pas seulement d'accepter.
+    reponse = {"accepter": True}
+    page.on("dialog", lambda d: (dialogues.append(d.message),
+                                 d.accept() if reponse["accepter"] else d.dismiss()))
     page.click("text=Supprimer")
     page.wait_for_selector("h1:has-text('Ma collection')")
     verifier(9, "Supprimer demande confirmation puis retire le disque",
@@ -280,6 +284,44 @@ with sync_playwright() as p:
     verifier(19, "Le binaire du scanner ne vient d'aucun CDN tiers",
              len(requetes_cdn) == 0, f"({requetes_cdn})" if requetes_cdn else "")
     page.screenshot(path=f"{SORTIE}/11-scan.png", full_page=True)
+
+    # 21. Avertissement de doublon. Sur 200 disques saisis en plusieurs seances,
+    # ressaisir deux fois le meme est plausible, et gonflerait l'estimation totale.
+    def ajouter_disque(artiste, album):
+        page.goto(BASE + "/ajouter")
+        page.wait_for_selector("form input")
+        page.fill("form input >> nth=0", artiste)
+        page.fill("form input >> nth=1", album)
+        page.click("button[type=submit]")
+
+    def nombre_de_disques():
+        page.goto(BASE + "/")
+        page.wait_for_selector("h1:has-text('Ma collection')")
+        page.wait_for_timeout(300)
+        return page.locator("li").count()
+
+    ajouter_disque("Beau Dommage", "Beau Dommage")
+    page.wait_for_selector("text=Inventaire")
+    avant = nombre_de_disques()
+
+    dialogues.clear()
+    reponse["accepter"] = False
+    ajouter_disque("beau  dommage", "BEAU DOMMAGE")   # casse et espaces differents
+    page.wait_for_timeout(800)
+    refus = nombre_de_disques()
+    avertit = len(dialogues) == 1 and "déjà dans votre collection" in dialogues[0]
+    verifier(21, "Un disque deja present declenche un avertissement",
+             avertit, f"(dialogue : {dialogues[0][:50]!r})" if dialogues else "(aucun dialogue)")
+    verifier("21.1", "Refuser l'avertissement n'ajoute pas le doublon",
+             refus == avant, f"(avant={avant} apres={refus})")
+
+    dialogues.clear()
+    reponse["accepter"] = True
+    ajouter_disque("Beau Dommage", "Beau Dommage")
+    page.wait_for_selector("text=Inventaire")
+    verifier("21.2", "Accepter l'avertissement ajoute quand meme le disque",
+             nombre_de_disques() == avant + 1,
+             f"(avant={avant} apres={nombre_de_disques()})")
 
     # 20. Aucune adresse ne doit laisser l'utilisatrice devant une page blanche :
     # ajoutee a l'ecran d'accueil, l'application n'a ni barre d'adresse ni bouton
